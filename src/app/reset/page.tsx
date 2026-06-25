@@ -1,13 +1,19 @@
 'use client'
 
-export const dynamic = 'force-dynamic'
-
-import { useState, useEffect } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { AuthShell, AuthBrand } from '@/components/AuthShell'
 
-export default function ResetPage() {
+export default function ResetPageWrapper() {
+  return (
+    <Suspense fallback={<AuthShell><div style={{ textAlign: 'center', padding: 40 }}>Chargement…</div></AuthShell>}>
+      <ResetPage />
+    </Suspense>
+  )
+}
+
+function ResetPage() {
   const params = useSearchParams()
   const router = useRouter()
   const token = params.get('token')
@@ -30,7 +36,6 @@ export default function ResetPage() {
     e.preventDefault(); setError('')
     if (password.length < 8) { setError('Mot de passe trop court (min 8 caractères)'); return }
     if (password !== confirm) { setError('Les mots de passe ne correspondent pas'); return }
-
     setLoading(true)
     const res = await fetch('/api/auth/reset-password', {
       method: 'PATCH',
@@ -61,9 +66,7 @@ export default function ResetPage() {
   if (done) {
     return (
       <AuthShell>
-        <div style={{ width: 70, height: 70, margin: '0 auto 16px', borderRadius: '50%',
-                      background: 'var(--green)', color: 'white',
-                      display: 'grid', placeItems: 'center', fontSize: 28 }}>
+        <div style={{ width: 70, height: 70, margin: '0 auto 16px', borderRadius: '50%', background: 'var(--green)', color: 'white', display: 'grid', placeItems: 'center', fontSize: 28 }}>
           <i className="fa-solid fa-check"></i>
         </div>
         <h1 style={{ fontSize: 22, fontWeight: 800, textAlign: 'center' }}>Mot de passe modifié !</h1>
@@ -79,24 +82,18 @@ export default function ResetPage() {
       <p style={{ fontSize: 13, color: 'var(--ink-mute)', textAlign: 'center', marginBottom: 24 }}>
         Choisissez un nouveau mot de passe pour votre compte
       </p>
-
       <form onSubmit={handleSubmit}>
         <div style={{ marginBottom: 14 }}>
           <label style={lbl}>Nouveau mot de passe</label>
-          <input type="password" value={password} onChange={e => setPassword(e.target.value)} required
-                 placeholder="••••••••" style={inputStyle} />
+          <input type="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder="••••••••" style={inputStyle} />
         </div>
         <div style={{ marginBottom: 14 }}>
           <label style={lbl}>Confirmation</label>
-          <input type="password" value={confirm} onChange={e => setConfirm(e.target.value)} required
-                 placeholder="••••••••" style={inputStyle} />
+          <input type="password" value={confirm} onChange={e => setConfirm(e.target.value)} required placeholder="••••••••" style={inputStyle} />
         </div>
-
         {error && (
-          <div style={{ background: 'var(--red-soft)', color: 'var(--red)', padding: '10px 14px',
-                        borderRadius: 10, fontSize: 13, fontWeight: 600, marginBottom: 14 }}>{error}</div>
+          <div style={{ background: 'var(--red-soft)', color: 'var(--red)', padding: '10px 14px', borderRadius: 10, fontSize: 13, fontWeight: 600, marginBottom: 14 }}>{error}</div>
         )}
-
         <button type="submit" disabled={loading} style={primaryBtn}>
           {loading ? 'Modification…' : 'Modifier mon mot de passe'}
         </button>
@@ -107,8 +104,4 @@ export default function ResetPage() {
 
 const inputStyle: React.CSSProperties = { width: '100%', padding: '12px 14px', border: '1px solid var(--line)', borderRadius: 10, fontFamily: 'inherit', fontSize: 14, outline: 'none' }
 const lbl: React.CSSProperties = { display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--ink-soft)', marginBottom: 6 }
-const primaryBtn: React.CSSProperties = {
-  width: '100%', background: 'var(--ink)', color: 'white', border: 'none',
-  padding: 13, borderRadius: 100, fontWeight: 600, fontSize: 14, fontFamily: 'inherit',
-  marginTop: 6, cursor: 'pointer',
-}
+const primaryBtn: React.CSSProperties = { width: '100%', background: 'var(--ink)', color: 'white', border: 'none', padding: 13, borderRadius: 100, fontWeight: 600, fontSize: 14, fontFamily: 'inherit', marginTop: 6, cursor: 'pointer' }
