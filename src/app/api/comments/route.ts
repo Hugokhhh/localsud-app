@@ -1,0 +1,100 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+import { getCurrentUser } from '@/lib/auth'
+
+/** POST - Créer un commentaire (client OU admin selon authorId) */
+export async function POST(req: NextRequest) {
+  try {
+    const user = await getCurrentUser() as any
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const { projectId, type, section, content, parentId } = await req.json()
+
+    if (!projectId || !content || !section) {
+      return NextResponse.json({ error: 'Page et message requis' }, { status: 400 })
+    }
+
+    // Vérifier que le client ne peut commenter QUE ses propres projets
+    if (user.role === 'CLIENT') {
+      const project = await prisma.project.findFirst({
+        where: { id: projectId, client: { user: { id: user.id } } },
+      })
+      if (!project) return NextResponse.json({ error: 'Projet introuvable' }, { status: 404 })
+    }
+
+    const comment = await prisma.comment.create({
+      data: {
+        projectId,
+        authorId: user.id,
+        type: type || 'MODIFICATION',
+        section,
+        content,
+        parentId: parentId || null,
+        status: 'OPEN',
+      },
+      include: { attachments: true },
+    })
+
+    // Si admin répond à un commentaire client OPEN, passer le parent en IN_PROGRESS
+    if (user.role === 'ADMIN' && parentId) {
+      await prisma.comment.update({
+        where: { id: parentId },
+        data: { status: 'IN_PROGRESS' },
+      })
+    }
+
+    return NextResponse.json({ comment })
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message }, { status: 500 })
+  }
+}
+
+/** PATCH ?id=xxx - Changer le statut d'un retour (admin uniquement) */
+export async function PATCH(req: NextRequest) {
+  try {
+    const user = await getCurrentUser() as any
+    if (!user || user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const id = req.nextUrl.searchParams.get('id')
+    if (!id) return NextResponse.json({ error: 'id requis' }, { status: 400 })
+
+    const { status } = await req.json()
+    if (!['OPEN', 'IN_PROGRESS', 'RESOLVED'].includes(status)) {
+      return NextResponse.json({ error: 'Statut invalide' }, { status: 400 })
+    }
+
+    const comment = await prisma.comment.update({
+      where: { id },
+      data: { status },
+    })
+    return NextResponse.json({ comment })
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message }, { status: 500 })
+  }
+}
+
+/** DELETE ?id=xxx - Supprimer un commentaire */
+export async function DELETE(req: NextRequest) {
+  try {
+    const user = await getCurrentUser() as any
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const id = req.nextUrl.searchParams.get('id')
+    if (!id) return NextResponse.json({ error: 'id requis' }, { status: 400 })
+
+    const comment = await prisma.comment.findUnique({ where: { id } })
+    if (!comment) return NextResponse.json({ error: 'Introuvable' }, { status: 404 })
+
+    // Client ne peut supprimer que ses propres commentaires
+    if (user.role !== 'ADMIN' && comment.authorId !== user.id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
+    await prisma.comment.delete({ where: { id } })
+    return NextResponse.json({ success: true })
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message }, { status: 500 })
+  }
+}
