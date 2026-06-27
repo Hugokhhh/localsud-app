@@ -27,11 +27,10 @@ export function ClientActions({ client }: Props) {
     city: client.city || '',
     phone: client.phone || '',
   })
-  const [deleteConfirm, setDeleteConfirm] = useState('')
+  const [confirm, setConfirm] = useState('')
 
   async function handleSave(e: React.FormEvent) {
-    e.preventDefault()
-    setSubmitting(true); setError('')
+    e.preventDefault(); setSubmitting(true); setError('')
     try {
       const res = await fetch('/api/clients/' + client.id, {
         method: 'PATCH',
@@ -42,21 +41,15 @@ export function ClientActions({ client }: Props) {
       if (!res.ok) throw new Error(data.error || 'Erreur')
       setEditOpen(false)
       router.refresh()
-    } catch (err: any) {
-      setError(err.message)
-    } finally {
-      setSubmitting(false)
-    }
+    } catch (err: any) { setError(err.message) }
+    finally { setSubmitting(false) }
   }
 
   async function handleDelete() {
     setSubmitting(true); setError('')
     try {
       const res = await fetch('/api/clients/' + client.id, { method: 'DELETE' })
-      if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || 'Erreur de suppression')
-      }
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Erreur') }
       router.push('/admin/clients')
       router.refresh()
     } catch (err: any) {
@@ -76,9 +69,8 @@ export function ClientActions({ client }: Props) {
         </button>
       </div>
 
-      {/* MODALE EDITION */}
       {editOpen && (
-        <Backdrop onClose={() => setEditOpen(false)}>
+        <Backdrop onClose={() => !submitting && setEditOpen(false)}>
           <form onSubmit={handleSave} style={modal}>
             <h2 style={modalTitle}>Modifier le client</h2>
             <Field label="Nom de l'entreprise">
@@ -87,10 +79,10 @@ export function ClientActions({ client }: Props) {
             <Field label="Email">
               <input required type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} style={input} />
             </Field>
-            <Row>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <Field label="Métier"><input value={form.trade} onChange={e => setForm({ ...form, trade: e.target.value })} style={input} /></Field>
               <Field label="Ville"><input value={form.city} onChange={e => setForm({ ...form, city: e.target.value })} style={input} /></Field>
-            </Row>
+            </div>
             <Field label="Téléphone">
               <input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} style={input} />
             </Field>
@@ -103,7 +95,6 @@ export function ClientActions({ client }: Props) {
         </Backdrop>
       )}
 
-      {/* MODALE SUPPRESSION */}
       {deleteOpen && (
         <Backdrop onClose={() => !submitting && setDeleteOpen(false)}>
           <div style={modal}>
@@ -117,11 +108,11 @@ export function ClientActions({ client }: Props) {
             <p style={{ fontSize: 13, color: 'var(--ink-soft)', marginBottom: 8 }}>
               Pour confirmer, tapez <strong>SUPPRIMER</strong> ci-dessous :
             </p>
-            <input value={deleteConfirm} onChange={e => setDeleteConfirm(e.target.value)} placeholder="SUPPRIMER" style={input} autoFocus />
+            <input value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="SUPPRIMER" style={input} autoFocus />
             {error && <div style={errorBox}>{error}</div>}
             <div style={{ display: 'flex', gap: 10, marginTop: 18, justifyContent: 'flex-end' }}>
               <button type="button" onClick={() => setDeleteOpen(false)} disabled={submitting} style={btnSecondary}>Annuler</button>
-              <button onClick={handleDelete} disabled={submitting || deleteConfirm !== 'SUPPRIMER'} style={{ ...btnDanger, opacity: deleteConfirm !== 'SUPPRIMER' ? 0.5 : 1 }}>
+              <button onClick={handleDelete} disabled={submitting || confirm !== 'SUPPRIMER'} style={{ ...btnDanger, opacity: confirm !== 'SUPPRIMER' ? 0.5 : 1 }}>
                 {submitting ? 'Suppression…' : 'Supprimer définitivement'}
               </button>
             </div>
@@ -134,8 +125,8 @@ export function ClientActions({ client }: Props) {
 
 function Backdrop({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(11,31,77,0.4)', display: 'grid', placeItems: 'center', zIndex: 100, padding: 20 }}>
-      <div onClick={e => e.stopPropagation()}>{children}</div>
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(11,31,77,0.45)', display: 'grid', placeItems: 'center', zIndex: 100, padding: 20 }}>
+      <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 460 }}>{children}</div>
     </div>
   )
 }
@@ -149,13 +140,9 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
-function Row({ children }: { children: React.ReactNode }) {
-  return <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>{children}</div>
-}
-
-const modal: React.CSSProperties = { background: 'white', padding: 28, borderRadius: 18, width: '100%', maxWidth: 460 }
+const modal: React.CSSProperties = { background: 'white', padding: 28, borderRadius: 18 }
 const modalTitle: React.CSSProperties = { fontSize: 20, fontWeight: 800, marginBottom: 16, color: 'var(--ink)' }
-const input: React.CSSProperties = { width: '100%', padding: '11px 13px', border: '1px solid var(--line)', borderRadius: 10, fontFamily: 'inherit', fontSize: 14, outline: 'none' }
+const input: React.CSSProperties = { width: '100%', padding: '11px 13px', border: '1px solid var(--line)', borderRadius: 10, fontFamily: 'inherit', fontSize: 14, outline: 'none', boxSizing: 'border-box' }
 const btnPrimary: React.CSSProperties = { background: 'var(--ink)', color: 'white', border: 'none', padding: '10px 18px', borderRadius: 100, fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }
 const btnSecondary: React.CSSProperties = { background: 'white', color: 'var(--ink)', border: '1px solid var(--line)', padding: '10px 16px', borderRadius: 100, fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }
 const btnDanger: React.CSSProperties = { background: '#DC2626', color: 'white', border: 'none', padding: '10px 18px', borderRadius: 100, fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }

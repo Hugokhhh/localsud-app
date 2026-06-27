@@ -1,5 +1,7 @@
 'use client'
 
+
+import { ClientActions } from './ClientActions'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -131,7 +133,16 @@ export function ProjectEditor({
 
   function updatePayment(id: string, patch: Partial<Payment>) {
     setPayments(payments.map(p => p.id === id ? { ...p, ...patch } : p))
-    markDirty()
+    // Si patch contient un statut ET le payment existe en base, on persiste tout de suite
+    if (patch.status && !id.startsWith('new-')) {
+      fetch(`/api/payments?id=${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: patch.status }),
+      }).then(() => router.refresh()).catch(() => {})
+    } else {
+      markDirty()
+    }
   }
 
   async function uploadPdf(paymentId: string, file: File) {
@@ -185,10 +196,7 @@ export function ProjectEditor({
             {client.company}
           </h1>
           <div style={{ fontSize: 13, color: 'var(--ink-mute)' }}>
-            {[client.trade, client.city, client.email].filter(Boolean).join(' · ')}
-          </div>
-        </div>
-      </div>
+            {[client.trade, client.city, client.email].filter(Boolean).join(' · ')}</div></div><ClientActions client={{ id: client.id, company: client.company, email: client.email, trade: client.trade, city: client.city }} /></div>
 
       {/* INFORMATIONS PROJET */}
       <Section title="Informations du projet" icon="fa-circle-info">
