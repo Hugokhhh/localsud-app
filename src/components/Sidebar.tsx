@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut } from 'next-auth/react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 type NavItem = { href: string; icon: string; label: string; badge?: number }
 
@@ -18,8 +18,87 @@ export function Sidebar({
 }) {
   const pathname = usePathname()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
   const isAdmin = variant === 'admin'
 
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 900)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
+
+  // Fermer le drawer au changement de page
+  useEffect(() => { setDrawerOpen(false) }, [pathname])
+
+  // Bloquer le scroll du body quand drawer ouvert
+  useEffect(() => {
+    document.body.style.overflow = drawerOpen ? 'hidden' : ''
+    return () => { document.body.style.overflow = '' }
+  }, [drawerOpen])
+
+  // ====== TOPBAR MOBILE ======
+  if (isMobile) {
+    return (
+      <>
+        <header style={{
+          position: 'sticky', top: 0, zIndex: 50,
+          background: isAdmin ? 'var(--ink)' : 'var(--white)',
+          borderBottom: `1px solid ${isAdmin ? 'var(--ink-2)' : 'var(--line)'}`,
+          padding: '12px 16px',
+          display: 'flex', alignItems: 'center', gap: 12,
+        }}>
+          <button
+            onClick={() => setDrawerOpen(true)}
+            aria-label="Menu"
+            style={{
+              background: 'transparent', border: 'none',
+              color: isAdmin ? 'var(--white)' : 'var(--ink)',
+              fontSize: 20, padding: 6, cursor: 'pointer',
+            }}
+          >
+            <i className="fa-solid fa-bars"></i>
+          </button>
+          <div style={{
+            fontSize: 18, fontWeight: 800, letterSpacing: '-0.02em',
+            color: isAdmin ? 'var(--white)' : 'var(--ink)',
+          }}>
+            Local<em style={{ fontStyle: 'normal', color: isAdmin ? 'var(--yellow)' : 'var(--yellow-deep)' }}>Sud</em>
+          </div>
+          <div style={{ flex: 1 }} />
+          <div style={{
+            width: 32, height: 32, borderRadius: '50%',
+            background: 'var(--yellow)', color: 'var(--ink)',
+            display: 'grid', placeItems: 'center', fontWeight: 700, fontSize: 12,
+          }}>{user.initials}</div>
+        </header>
+
+        {drawerOpen && (
+          <>
+            <div className="drawer-overlay" onClick={() => setDrawerOpen(false)} />
+            <aside className="drawer-panel" style={{
+              background: isAdmin ? 'var(--ink)' : 'var(--white)',
+              padding: '20px 16px',
+              display: 'flex', flexDirection: 'column',
+            }}>
+              <NavContent
+                isAdmin={isAdmin}
+                items={items}
+                pathname={pathname}
+                user={user}
+                menuOpen={menuOpen}
+                setMenuOpen={setMenuOpen}
+                onClose={() => setDrawerOpen(false)}
+              />
+            </aside>
+          </>
+        )}
+      </>
+    )
+  }
+
+  // ====== SIDEBAR DESKTOP ======
   return (
     <aside style={{
       width: 260, flexShrink: 0,
@@ -29,14 +108,48 @@ export function Sidebar({
       display: 'flex', flexDirection: 'column',
       height: '100vh', position: 'sticky', top: 0,
     }}>
+      <NavContent
+        isAdmin={isAdmin}
+        items={items}
+        pathname={pathname}
+        user={user}
+        menuOpen={menuOpen}
+        setMenuOpen={setMenuOpen}
+      />
+    </aside>
+  )
+}
+
+function NavContent({
+  isAdmin, items, pathname, user, menuOpen, setMenuOpen, onClose,
+}: {
+  isAdmin: boolean
+  items: NavItem[]
+  pathname: string
+  user: { name: string; subtitle?: string; initials: string }
+  menuOpen: boolean
+  setMenuOpen: (v: boolean) => void
+  onClose?: () => void
+}) {
+  return (
+    <>
       {/* Brand */}
-      <div style={{ display: 'flex', alignItems: 'center', padding: '8px 12px', marginBottom: 24 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', marginBottom: 24 }}>
         <div style={{
           fontSize: 20, fontWeight: 800, letterSpacing: '-0.02em',
           color: isAdmin ? 'var(--white)' : 'var(--ink)',
         }}>
           Local<em style={{ fontStyle: 'normal', color: isAdmin ? 'var(--yellow)' : 'var(--yellow-deep)' }}>Sud</em>
         </div>
+        {onClose && (
+          <button onClick={onClose} aria-label="Fermer" style={{
+            background: 'transparent', border: 'none',
+            color: isAdmin ? 'rgba(255,255,255,0.6)' : 'var(--ink-mute)',
+            fontSize: 18, cursor: 'pointer', padding: 4,
+          }}>
+            <i className="fa-solid fa-xmark"></i>
+          </button>
+        )}
       </div>
 
       {/* CTA */}
@@ -75,8 +188,7 @@ export function Sidebar({
         {items.map(item => {
           const active = pathname === item.href || (item.href !== '/admin' && item.href !== '/espace' && pathname.startsWith(item.href))
           return (
-            <Link key={item.href} href={item.href}
-                  style={navItemStyle(isAdmin, active)}>
+            <Link key={item.href} href={item.href} style={navItemStyle(isAdmin, active)}>
               <i className={item.icon} style={{ width: 16, textAlign: 'center', fontSize: 14 }}></i>
               <span>{item.label}</span>
               {item.badge !== undefined && item.badge > 0 && (
@@ -135,7 +247,7 @@ export function Sidebar({
           </div>
         )}
       </div>
-    </aside>
+    </>
   )
 }
 

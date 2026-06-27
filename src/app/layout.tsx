@@ -2,6 +2,13 @@ import type { Metadata } from 'next'
 import './globals.css'
 import { Providers } from '@/components/Providers'
 
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+}
+
 export const metadata: Metadata = {
   title: 'LocalSud — Espace client',
   description: 'Suivez l\'avancement de votre projet web avec LocalSud',

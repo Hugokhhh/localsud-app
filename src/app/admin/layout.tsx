@@ -15,7 +15,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   })
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh' }}>
+    <div className="app-shell">
       <Sidebar
         variant="admin"
         user={{
@@ -28,7 +28,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           { href: '/admin/clients', icon: 'fa-solid fa-users', label: 'Clients', badge: openCount },
         ]}
       />
-      <main style={{ flex: 1, padding: '28px 36px', maxWidth: 1200 }}>
+      <main className="app-main">
         {children}
       </main>
     </div>

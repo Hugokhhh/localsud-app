@@ -264,7 +264,7 @@ export function ProjectEditor({
             borderRadius: 12, marginBottom: 8, padding: 12,
           }}>
             <div style={{
-              display: 'grid', gridTemplateColumns: '24px 1.2fr 1fr 1fr 130px 32px',
+              display: 'grid', gridTemplateColumns: '24px 1.2fr 1fr 1fr 130px 32px', minWidth: 540,
               gap: 10, alignItems: 'center',
             }}>
               <i className="fa-solid fa-grip-vertical" style={{ color: 'var(--ink-mute)' }}></i>
@@ -391,7 +391,7 @@ function Section({ title, icon, subtitle, children }: { title: string; icon: str
 }
 
 function Row({ children }: { children: React.ReactNode }) {
-  return <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>{children}</div>
+  return <div className="grid-2-mobile" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>{children}</div>
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
