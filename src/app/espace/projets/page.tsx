@@ -83,7 +83,7 @@ export default async function ProjetsClientPage() {
             borderRadius: 100, fontWeight: 700, fontSize: 13,
             display: 'flex', alignItems: 'center', gap: 8,
           }}>
-            <i className="fa-brands fa-figma"></i> Voir la maquette
+            <i className="fa-solid fa-image"></i> Voir la maquette
           </a>
         )}
       </div>

@@ -46,10 +46,10 @@ export default async function EspaceAccueilPage() {
       {/* 3 cards de ressources */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 14, marginBottom: 28 }}>
         <Link href={project.mockupUrl || '#'} target="_blank" rel="noopener noreferrer" style={resourceCard}>
-          <div style={resourceIcon('#E8EDFA', 'var(--ink)')}><i className="fa-brands fa-figma"></i></div>
+          <div style={resourceIcon('#E8EDFA', 'var(--ink)')}><i className="fa-solid fa-image"></i></div>
           <div style={{ flex: 1 }}>
             <div style={resourceLbl}>Visualiser</div>
-            <div style={resourceTitle}>Maquette Figma</div>
+            <div style={resourceTitle}>Maquette</div>
             <div style={resourceMeta}>{project.mockupUrl ? 'Cliquez pour ouvrir →' : 'Bientôt disponible'}</div>
           </div>
         </Link>

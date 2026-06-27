@@ -91,7 +91,7 @@ model Project {
   status        ProjectStatus  @default(BRIEF)
 
   // Liens des ressources visibles par le client
-  mockupUrl     String?        // Lien Figma de la maquette
+  mockupUrl     String?        // Lien de la maquette
   documentsUrl  String?        // Lien Drive des documents
 
   // Tarif total contractualisé

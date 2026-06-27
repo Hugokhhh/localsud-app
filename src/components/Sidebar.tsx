@@ -235,6 +235,17 @@ function NavContent({
             borderRadius: 10, padding: 6, minWidth: 160,
             boxShadow: '0 8px 24px rgba(11,31,77,0.12)', zIndex: 10,
           }}>
+            <Link href={isAdmin ? '/admin/compte' : '/espace/compte'}
+                  onClick={() => setMenuOpen(false)}
+                  style={{
+                    width: '100%', padding: '8px 12px', borderRadius: 8,
+                    background: 'transparent', textAlign: 'left',
+                    fontFamily: 'inherit', fontSize: 13, color: 'var(--ink)',
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    textDecoration: 'none',
+                  }}>
+              <i className="fa-solid fa-user-gear"></i> Mon compte
+            </Link>
             <button onClick={() => signOut({ callbackUrl: '/connexion' })}
                     style={{
                       width: '100%', padding: '8px 12px', borderRadius: 8, border: 'none',

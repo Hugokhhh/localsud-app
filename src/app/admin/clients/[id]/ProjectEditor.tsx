@@ -225,8 +225,8 @@ export function ProjectEditor({
       {/* LIENS RESSOURCES */}
       <Section title="Liens des ressources client" icon="fa-link"
                subtitle="Ces liens apparaissent dans l'espace client">
-        <LinkRow icon="fa-brands fa-figma" iconBg="var(--blue-soft)" iconColor="var(--ink)"
-                 label="Maquette" title="Lien Figma de la maquette"
+        <LinkRow icon="fa-solid fa-image" iconBg="var(--blue-soft)" iconColor="var(--ink)"
+                 label="Maquette" title="Lien de la maquette"
                  value={data.mockupUrl}
                  onChange={v => { setData({ ...data, mockupUrl: v }); markDirty() }} />
         <LinkRow icon="fa-solid fa-folder-open" iconBg="var(--green-soft)" iconColor="var(--green)"

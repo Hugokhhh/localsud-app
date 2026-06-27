@@ -52,7 +52,7 @@ async function main() {
               type: 'VITRINE',
               status: 'RETOURS',
               totalPrice: 2400,
-              mockupUrl: 'https://www.figma.com/file/abc123/maison-colette-v2',
+              mockupUrl: 'https://maquette.localsud.fr/maison-colette-v2',
               documentsUrl: 'https://drive.google.com/drive/folders/xyz456',
               estimatedDelivery: new Date('2026-06-12'),
               payments: {
