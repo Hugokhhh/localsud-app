@@ -34,16 +34,20 @@ export async function sendInvitationEmail(opts: { to: string; clientName: string
   }
 }
 
-export async function sendResetPasswordEmail(opts: { to: string; resetToken: string }) {
-  if (!resend) return
+export async function sendResetPasswordEmail(opts: { to: string; name?: string | null; resetToken: string }) {
+  if (!resend) {
+    console.warn('[Email] Resend NON configure pour reset:', opts.to)
+    return
+  }
   const url = APP_URL + '/reset?token=' + opts.resetToken
   try {
-    await resend.emails.send({
+    const result = await resend.emails.send({
       from: FROM,
       to: opts.to,
-      subject: 'Reset mot de passe',
-      html: '<p>Cliquez ici : <a href="' + url + '">' + url + '</a></p>',
+      subject: 'Reset mot de passe LocalSud',
+      html: '<p>Bonjour ' + (opts.name || '') + ', cliquez ici pour reset : <a href="' + url + '">' + url + '</a></p>',
     })
+    console.log('[Email] Reset envoye :', JSON.stringify(result))
   } catch (err: any) {
     console.error('[Email] Erreur reset :', err.message)
   }
