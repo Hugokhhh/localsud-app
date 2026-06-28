@@ -1,10 +1,10 @@
 import { redirect } from 'next/navigation'
-
-export const dynamic = 'force-dynamic'
 import { getCurrentUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { CommentThread } from '@/components/CommentThread'
 import { formatDate, PROJECT_STATUS, PROJECT_TYPE } from '@/lib/utils'
+import Link from 'next/link'
+
+export const dynamic = 'force-dynamic'
 
 export default async function ProjetsClientPage() {
   const user = await getCurrentUser() as any
@@ -15,40 +15,17 @@ export default async function ProjetsClientPage() {
     include: {
       projects: {
         include: {
-          comments: {
-            include: {
-              attachments: true,
-              parent: true,
-            },
-            orderBy: { createdAt: 'desc' },
-          },
+          comments: { where: { status: 'OPEN', parentId: null } },
         },
         orderBy: { createdAt: 'desc' },
-        take: 1,
       },
     },
   })
 
-  const project = client?.projects[0]
-  if (!project) {
+  const projects = client?.projects || []
+  if (projects.length === 0) {
     return <div>Aucun projet en cours.</div>
   }
-
-  // Récupérer les auteurs des commentaires en bulk
-  const authorIds = [...new Set(project.comments.map(c => c.authorId))]
-  const authors = await prisma.user.findMany({
-    where: { id: { in: authorIds } },
-    select: { id: true, name: true, role: true },
-  })
-  const authorMap = Object.fromEntries(authors.map(a => [a.id, a]))
-
-  const commentsWithAuthor = project.comments.map(c => ({
-    ...c,
-    author: authorMap[c.authorId] || { name: 'Utilisateur', role: 'CLIENT' },
-    createdAt: c.createdAt.toISOString(),
-  })) as any
-
-  const statusMeta = PROJECT_STATUS[project.status as keyof typeof PROJECT_STATUS]
 
   return (
     <div>
@@ -56,52 +33,38 @@ export default async function ProjetsClientPage() {
         Mes <em style={{ color: 'var(--yellow-deep)', fontStyle: 'italic' }}>projets</em>
       </h1>
       <p style={{ color: 'var(--ink-mute)', fontSize: 14, marginBottom: 28 }}>
-        Votre projet en cours et vos échanges
+        Cliquez sur un projet pour voir ses détails et échanges.
       </p>
 
-      {/* Bandeau projet */}
-      <div style={{
-        background: 'var(--ink)', color: 'white', borderRadius: 16,
-        padding: 24, marginBottom: 24, display: 'flex', alignItems: 'center', gap: 18,
-      }}>
-        <div style={{
-          width: 52, height: 52, borderRadius: 12, background: 'var(--yellow)',
-          color: 'var(--ink)', display: 'grid', placeItems: 'center',
-          fontWeight: 800, fontSize: 22,
-        }}>
-          <i className="fa-solid fa-globe"></i>
-        </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>{project.name}</div>
-          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>
-            {PROJECT_TYPE[project.type as keyof typeof PROJECT_TYPE]} · Statut : {statusMeta?.label} · Livraison {formatDate(project.estimatedDelivery)}
-          </div>
-        </div>
-        {project.mockupUrl && (
-          <a href={project.mockupUrl} target="_blank" rel="noopener noreferrer" style={{
-            padding: '10px 18px', background: 'var(--yellow)', color: 'var(--ink)',
-            borderRadius: 100, fontWeight: 700, fontSize: 13,
-            display: 'flex', alignItems: 'center', gap: 8,
-          }}>
-            <i className="fa-solid fa-image"></i> Voir la maquette
-          </a>
-        )}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 14 }}>
+        {projects.map(project => {
+          const statusMeta = PROJECT_STATUS[project.status as keyof typeof PROJECT_STATUS]
+          const openComments = project.comments.length
+          return (
+            <Link key={project.id} href={`/espace/projets/${project.id}`} style={{
+              background: 'var(--white)', border: '1px solid var(--line)',
+              borderRadius: 16, padding: 20, textDecoration: 'none', display: 'block',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <span style={{ fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ink-mute)', fontWeight: 700 }}>
+                  {PROJECT_TYPE[project.type as keyof typeof PROJECT_TYPE]}
+                </span>
+                {openComments > 0 && (
+                  <span style={{ background: 'var(--red)', color: 'white', fontSize: 10, padding: '2px 8px', borderRadius: 10, fontWeight: 700 }}>
+                    {openComments} retour{openComments > 1 ? 's' : ''}
+                  </span>
+                )}
+              </div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--ink)', marginBottom: 6 }}>{project.name}</div>
+              <div style={{ fontSize: 13, color: 'var(--ink-soft)' }}>
+                <i className="fa-solid fa-circle" style={{ fontSize: 6, color: statusMeta?.color || 'var(--ink-mute)', marginRight: 6, verticalAlign: 'middle' }}></i>
+                {statusMeta?.label}
+                {project.estimatedDelivery && <> · Livraison {formatDate(project.estimatedDelivery)}</>}
+              </div>
+            </Link>
+          )
+        })}
       </div>
-
-      {/* Section retours */}
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--ink-mute)', fontWeight: 700, marginBottom: 4 }}>
-          Échanges
-        </div>
-        <h2 style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-0.02em' }}>Retours & commentaires</h2>
-      </div>
-
-      <CommentThread
-        projectId={project.id}
-        comments={commentsWithAuthor}
-        currentUser={user}
-        isAdmin={false}
-      />
     </div>
   )
 }
