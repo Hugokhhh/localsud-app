@@ -76,8 +76,7 @@ export default async function ProjetClientDetailPage({ params }: { params: { id:
       <CommentThread
         projectId={project.id}
         comments={commentsWithAuthor}
-        currentUserId={user.id}
-        readOnly={false}
+        currentUser={{ id: user.id, name: user.name, role: 'CLIENT' }}
         isAdmin={false}
       />
     </div>
