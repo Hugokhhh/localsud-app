@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
     const token = generateToken()
     await prisma.authToken.create({
       data: {
-        userId: user.id, token, type: 'INVITATION',
+        userId: user.id, token, type: 'SETUP',
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       },
     })
