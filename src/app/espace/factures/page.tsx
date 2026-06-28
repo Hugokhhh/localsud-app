@@ -99,8 +99,8 @@ export default async function FacturesClientPage() {
                   }}>
                     {p.status === 'PAID' ? 'Payée' : (p.status === 'OVERDUE' ? 'En retard' : 'En attente')}
                   </div>
-                  {p.invoiceUrl ? (
-                    <a href={p.invoiceUrl} target="_blank" rel="noopener noreferrer" style={{
+                  {p.pdfUrl ? (
+                    <a href={p.pdfUrl} target="_blank" rel="noopener noreferrer" style={{
                       fontSize: 12, color: 'var(--ink)', fontWeight: 600,
                       display: 'flex', alignItems: 'center', gap: 4,
                     }}>
