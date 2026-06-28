@@ -101,7 +101,6 @@ export default async function AdminClientDetailPage({
           documentsUrl: project.documentsUrl,
           totalPrice: Number(project.totalPrice),
           estimatedDelivery: project.estimatedDelivery?.toISOString().slice(0, 10) || '',
-          deliveredAt: project.deliveredAt?.toISOString().slice(0, 10) || '',
         }}
         payments={project.payments.map(p => ({
           id: p.id, label: p.label, amount: Number(p.amount),
