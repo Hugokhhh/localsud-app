@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut } from 'next-auth/react'
 import { useEffect, useState } from 'react'
+import { HelpPopover } from './HelpPopover'
 
 type NavItem = { href: string; icon: string; label: string; badge?: number }
 
@@ -164,14 +165,7 @@ function NavContent({
           <i className="fa-solid fa-arrow-right"></i>
         </Link>
       ) : (
-        <div style={{
-          background: 'var(--ink)', color: 'var(--white)',
-          borderRadius: 12, padding: '14px 16px', marginBottom: 24,
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          fontSize: 13, fontWeight: 600,
-        }}>
-          <span><i className="fa-solid fa-headset" style={{ marginRight: 8, color: 'var(--yellow)' }}></i> Besoin d'aide ?</span>
-        </div>
+        <HelpPopover />
       )}
 
       {/* Nav label */}
