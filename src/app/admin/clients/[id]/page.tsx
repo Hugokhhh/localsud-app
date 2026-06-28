@@ -30,6 +30,42 @@ export default async function AdminClientDetailPage({
   if (!client) notFound()
   if (client.projects.length === 0) {
     return (
+      <div>
+        <h1>Aucun projet associé à ce client.</h1>
+      </div>
+    )
+  }
+
+  const activeProjectId = searchParams.projectId && client.projects.some(p => p.id === searchParams.projectId)
+    ? searchParams.projectId
+    : client.projects[0].id
+
+  const project = await prisma.project.findUnique({
+    where: { id: activeProjectId },
+    include: {
+      payments: { orderBy: { order: 'asc' } },
+      comments: {
+        include: { attachments: true },
+        orderBy: { createdAt: 'desc' },
+      },
+    },
+  })
+  if (!project) notFound()
+
+  const authorIds = [...new Set(project.comments.map(c => c.authorId))]
+  const authors = await prisma.user.findMany({
+    where: { id: { in: authorIds } },
+    select: { id: true, name: true, role: true },
+  })
+  const authorMap = Object.fromEntries(authors.map(a => [a.id, a]))
+
+  const commentsWithAuthor = project.comments.map(c => ({
+    ...c,
+    author: authorMap[c.authorId] || { name: 'Utilisateur', role: 'CLIENT' },
+    createdAt: c.createdAt.toISOString(),
+  })) as any
+
+  return (
     <div>
       <ClientActions
         client={{
@@ -50,8 +86,10 @@ export default async function AdminClientDetailPage({
 
       <ProjectEditor
         client={{
-          id: client.id, company: client.company,
-          trade: client.trade, city: client.city,
+          id: client.id,
+          company: client.company,
+          trade: client.trade,
+          city: client.city,
           email: client.user.email,
         }}
         project={{
