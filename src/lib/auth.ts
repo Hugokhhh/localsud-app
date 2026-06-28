@@ -58,7 +58,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 // Helpers
 export async function getCurrentUser() {
   const session = await auth()
-  return session?.user as (typeof session extends null ? null : { id: string; email: string; name: string; role: 'ADMIN' | 'CLIENT' } | null)
+  return session?.user as (typeof session extends null ? null : { id: string; email: string; name: string; role: 'ADMIN' | 'CLIENT' | 'COLLABORATOR' } | null)
 }
 
 export async function requireAdmin() {
@@ -73,4 +73,28 @@ export async function requireClient() {
   const user = await getCurrentUser()
   if (!user) throw new Error('Unauthorized')
   return user
+}
+
+
+/** Vérifie qu'un user peut accéder à un client (admin ou collab assigné) */
+export async function canAccessClient(userId: string, role: string, clientId: string): Promise<boolean> {
+  if (role === 'ADMIN') return true
+  if (role !== 'COLLABORATOR') return false
+  const { prisma } = await import('./prisma')
+  const client = await prisma.client.findUnique({
+    where: { id: clientId },
+    select: { collaboratorId: true },
+  })
+  return client?.collaboratorId === userId
+}
+
+export async function canAccessProject(userId: string, role: string, projectId: string): Promise<boolean> {
+  if (role === 'ADMIN') return true
+  if (role !== 'COLLABORATOR') return false
+  const { prisma } = await import('./prisma')
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: { client: { select: { collaboratorId: true } } },
+  })
+  return project?.client.collaboratorId === userId
 }

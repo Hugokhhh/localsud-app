@@ -21,6 +21,12 @@ export async function POST(req: NextRequest) {
       })
       if (!project) return NextResponse.json({ error: 'Projet introuvable' }, { status: 404 })
     }
+    if (user.role === 'COLLABORATOR') {
+      const project = await prisma.project.findFirst({
+        where: { id: projectId, client: { collaboratorId: user.id } },
+      })
+      if (!project) return NextResponse.json({ error: 'Projet non autorisé' }, { status: 403 })
+    }
 
     const comment = await prisma.comment.create({
       data: {
@@ -53,8 +59,9 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   try {
     const user = await getCurrentUser() as any
-    if (!user || user.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (user.role !== 'ADMIN' && user.role !== 'COLLABORATOR') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     const id = req.nextUrl.searchParams.get('id')

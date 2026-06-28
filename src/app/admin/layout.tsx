@@ -26,6 +26,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         items={[
           { href: '/admin', icon: 'fa-solid fa-grid-2', label: 'Tableau de bord' },
           { href: '/admin/clients', icon: 'fa-solid fa-users', label: 'Clients', badge: openCount },
+          { href: '/admin/collaborateurs', icon: 'fa-solid fa-user-tie', label: 'Collaborateurs' },
         ]}
       />
       <main className="app-main">

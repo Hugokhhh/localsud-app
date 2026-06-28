@@ -1,21 +1,18 @@
 import { redirect, notFound } from 'next/navigation'
 import { getCurrentUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { ProjectEditor } from './ProjectEditor'
-import { ProjectTabs } from './ProjectTabs'
-import { ClientActions } from './ClientActions'
-import { AssignCollab } from './AssignCollab'
+import { ProjectEditor } from '@/app/admin/clients/[id]/ProjectEditor'
+import { ProjectTabs } from '@/app/admin/clients/[id]/ProjectTabs'
+import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
 
-export default async function AdminClientDetailPage({
+export default async function CollabClientDetailPage({
   params, searchParams,
-}: {
-  params: { id: string }
-  searchParams: { projectId?: string }
-}) {
+}: { params: { id: string }; searchParams: { projectId?: string } }) {
   const user = await getCurrentUser() as any
   if (!user) redirect('/connexion')
+  if (user.role !== 'COLLABORATOR') redirect('/')
 
   const client = await prisma.client.findUnique({
     where: { id: params.id },
@@ -28,20 +25,11 @@ export default async function AdminClientDetailPage({
     },
   })
 
-  if (!client) notFound()
-
-  const collaborators = await prisma.user.findMany({
-    where: { role: 'COLLABORATOR' },
-    select: { id: true, name: true, email: true },
-    orderBy: { name: 'asc' },
-  })
-
+  if (!client || client.collaboratorId !== user.id) {
+    redirect('/collab')
+  }
   if (client.projects.length === 0) {
-    return (
-      <div>
-        <h1>Aucun projet associé à ce client.</h1>
-      </div>
-    )
+    return <div>Aucun projet associé à ce client.</div>
   }
 
   const activeProjectId = searchParams.projectId && client.projects.some(p => p.id === searchParams.projectId)
@@ -50,10 +38,7 @@ export default async function AdminClientDetailPage({
 
   const project = await prisma.project.findUnique({
     where: { id: activeProjectId },
-    include: {
-      payments: { orderBy: { order: 'asc' } },
-      comments: { include: { attachments: true }, orderBy: { createdAt: 'desc' } },
-    },
+    include: { comments: { include: { attachments: true }, orderBy: { createdAt: 'desc' } } },
   })
   if (!project) notFound()
 
@@ -72,22 +57,16 @@ export default async function AdminClientDetailPage({
 
   return (
     <div>
-      <ClientActions
-        client={{
-          id: client.id,
-          company: client.company,
-          email: client.user.email,
-          trade: client.trade,
-          city: client.city,
-          phone: client.phone,
-        }}
-      />
+      <Link href="/collab" style={{ fontSize: 13, color: 'var(--ink-mute)', marginBottom: 12, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+        <i className="fa-solid fa-arrow-left"></i> Retour à mes clients
+      </Link>
 
-      <AssignCollab
-        clientId={client.id}
-        currentCollabId={client.collaboratorId}
-        collaborators={collaborators}
-      />
+      <div style={{ marginBottom: 20 }}>
+        <h1 style={{ fontSize: 28, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--ink)' }}>{client.company}</h1>
+        <div style={{ color: 'var(--ink-mute)', fontSize: 14, marginTop: 4 }}>
+          {client.trade || 'Client'} · {client.city || 'Lieu non précisé'} · {client.user.email}
+        </div>
+      </div>
 
       <ProjectTabs
         clientId={client.id}
@@ -97,10 +76,8 @@ export default async function AdminClientDetailPage({
 
       <ProjectEditor
         client={{
-          id: client.id,
-          company: client.company,
-          trade: client.trade,
-          city: client.city,
+          id: client.id, company: client.company,
+          trade: client.trade, city: client.city,
           email: client.user.email,
         }}
         project={{
@@ -112,18 +89,7 @@ export default async function AdminClientDetailPage({
           documentsUrl: project.documentsUrl,
           totalPrice: Number(project.totalPrice),
           estimatedDelivery: project.estimatedDelivery?.toISOString().slice(0, 10) || '',
-          payments: project.payments.map(p => ({
-            id: p.id,
-            label: p.label,
-            amount: Number(p.amount),
-            status: p.status,
-            dueDate: p.dueDate?.toISOString().slice(0, 10) || null,
-            paidAt: p.paidAt?.toISOString() || null,
-            invoiceRef: p.invoiceRef || null,
-            pdfUrl: p.pdfUrl || null,
-            pdfName: p.pdfName || null,
-            pdfSize: p.pdfSize || null,
-          })),
+          payments: [],
         }}
         comments={commentsWithAuthor}
         currentUser={user}

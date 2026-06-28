@@ -5,5 +5,6 @@ export default async function HomePage() {
   const user = await getCurrentUser() as any
   if (!user) redirect('/connexion')
   if (user.role === 'ADMIN') redirect('/admin')
+  if (user.role === 'COLLABORATOR') redirect('/collab')
   redirect('/espace')
 }

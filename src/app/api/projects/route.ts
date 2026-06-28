@@ -33,12 +33,16 @@ export async function POST(req: NextRequest) {
   }
 }
 
-/** PATCH ?id=xxx - Modifier les infos d'un projet (admin) */
+/** PATCH ?id=xxx - Modifier les infos d'un projet (admin ou collab assigné) */
 export async function PATCH(req: NextRequest) {
   try {
-    await requireAdmin()
+    const { getCurrentUser, canAccessProject } = await import('@/lib/auth')
+    const user = await getCurrentUser() as any
+    if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
     const projectId = req.nextUrl.searchParams.get('id')
     if (!projectId) return NextResponse.json({ error: 'id requis' }, { status: 400 })
+    const allowed = await canAccessProject(user.id, user.role, projectId)
+    if (!allowed) return NextResponse.json({ error: 'forbidden' }, { status: 403 })
 
     const body = await req.json()
     const data: any = {}

@@ -9,11 +9,9 @@ import { HelpPopover } from './HelpPopover'
 type NavItem = { href: string; icon: string; label: string; badge?: number }
 
 export function Sidebar({
-  variant,
-  user,
-  items,
+  variant, user, items,
 }: {
-  variant: 'client' | 'admin'
+  variant: 'client' | 'admin' | 'collaborator'
   user: { name: string; subtitle?: string; initials: string }
   items: NavItem[]
 }) {
@@ -21,7 +19,10 @@ export function Sidebar({
   const [menuOpen, setMenuOpen] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+
   const isAdmin = variant === 'admin'
+  const isCollab = variant === 'collaborator'
+  const darkBg = isAdmin
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 900)
@@ -30,42 +31,37 @@ export function Sidebar({
     return () => window.removeEventListener('resize', check)
   }, [])
 
-  // Fermer le drawer au changement de page
   useEffect(() => { setDrawerOpen(false) }, [pathname])
 
-  // Bloquer le scroll du body quand drawer ouvert
   useEffect(() => {
     document.body.style.overflow = drawerOpen ? 'hidden' : ''
     return () => { document.body.style.overflow = '' }
   }, [drawerOpen])
 
-  // ====== TOPBAR MOBILE ======
+  const accountHref = isAdmin ? '/admin/compte' : isCollab ? '/collab/compte' : '/espace/compte'
+
   if (isMobile) {
     return (
       <>
         <header style={{
           position: 'sticky', top: 0, zIndex: 50,
-          background: isAdmin ? 'var(--ink)' : 'var(--white)',
-          borderBottom: `1px solid ${isAdmin ? 'var(--ink-2)' : 'var(--line)'}`,
+          background: darkBg ? 'var(--ink)' : 'var(--white)',
+          borderBottom: `1px solid ${darkBg ? 'var(--ink-2)' : 'var(--line)'}`,
           padding: '12px 16px',
           display: 'flex', alignItems: 'center', gap: 12,
         }}>
-          <button
-            onClick={() => setDrawerOpen(true)}
-            aria-label="Menu"
-            style={{
-              background: 'transparent', border: 'none',
-              color: isAdmin ? 'var(--white)' : 'var(--ink)',
-              fontSize: 20, padding: 6, cursor: 'pointer',
-            }}
-          >
+          <button onClick={() => setDrawerOpen(true)} aria-label="Menu" style={{
+            background: 'transparent', border: 'none',
+            color: darkBg ? 'var(--white)' : 'var(--ink)',
+            fontSize: 20, padding: 6, cursor: 'pointer',
+          }}>
             <i className="fa-solid fa-bars"></i>
           </button>
           <div style={{
             fontSize: 18, fontWeight: 800, letterSpacing: '-0.02em',
-            color: isAdmin ? 'var(--white)' : 'var(--ink)',
+            color: darkBg ? 'var(--white)' : 'var(--ink)',
           }}>
-            Local<em style={{ fontStyle: 'normal', color: isAdmin ? 'var(--yellow)' : 'var(--yellow-deep)' }}>Sud</em>
+            Local<em style={{ fontStyle: 'normal', color: darkBg ? 'var(--yellow)' : 'var(--yellow-deep)' }}>Sud</em>
           </div>
           <div style={{ flex: 1 }} />
           <div style={{
@@ -79,19 +75,13 @@ export function Sidebar({
           <>
             <div className="drawer-overlay" onClick={() => setDrawerOpen(false)} />
             <aside className="drawer-panel" style={{
-              background: isAdmin ? 'var(--ink)' : 'var(--white)',
+              background: darkBg ? 'var(--ink)' : 'var(--white)',
               padding: '20px 16px',
               display: 'flex', flexDirection: 'column',
             }}>
-              <NavContent
-                isAdmin={isAdmin}
-                items={items}
-                pathname={pathname}
-                user={user}
-                menuOpen={menuOpen}
-                setMenuOpen={setMenuOpen}
-                onClose={() => setDrawerOpen(false)}
-              />
+              <NavContent variant={variant} items={items} pathname={pathname} user={user}
+                menuOpen={menuOpen} setMenuOpen={setMenuOpen}
+                accountHref={accountHref} onClose={() => setDrawerOpen(false)} />
             </aside>
           </>
         )}
@@ -99,53 +89,50 @@ export function Sidebar({
     )
   }
 
-  // ====== SIDEBAR DESKTOP ======
   return (
     <aside style={{
       width: 260, flexShrink: 0,
-      background: isAdmin ? 'var(--ink)' : 'var(--white)',
-      borderRight: `1px solid ${isAdmin ? 'var(--ink-2)' : 'var(--line)'}`,
+      background: darkBg ? 'var(--ink)' : 'var(--white)',
+      borderRight: `1px solid ${darkBg ? 'var(--ink-2)' : 'var(--line)'}`,
       padding: '20px 16px',
       display: 'flex', flexDirection: 'column',
       height: '100vh', position: 'sticky', top: 0,
     }}>
-      <NavContent
-        isAdmin={isAdmin}
-        items={items}
-        pathname={pathname}
-        user={user}
-        menuOpen={menuOpen}
-        setMenuOpen={setMenuOpen}
-      />
+      <NavContent variant={variant} items={items} pathname={pathname} user={user}
+        menuOpen={menuOpen} setMenuOpen={setMenuOpen} accountHref={accountHref} />
     </aside>
   )
 }
 
 function NavContent({
-  isAdmin, items, pathname, user, menuOpen, setMenuOpen, onClose,
+  variant, items, pathname, user, menuOpen, setMenuOpen, onClose, accountHref,
 }: {
-  isAdmin: boolean
+  variant: 'client' | 'admin' | 'collaborator'
   items: NavItem[]
   pathname: string
   user: { name: string; subtitle?: string; initials: string }
   menuOpen: boolean
   setMenuOpen: (v: boolean) => void
   onClose?: () => void
+  accountHref: string
 }) {
+  const isAdmin = variant === 'admin'
+  const isCollab = variant === 'collaborator'
+  const darkBg = isAdmin
+
   return (
     <>
-      {/* Brand */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', marginBottom: 24 }}>
         <div style={{
           fontSize: 20, fontWeight: 800, letterSpacing: '-0.02em',
-          color: isAdmin ? 'var(--white)' : 'var(--ink)',
+          color: darkBg ? 'var(--white)' : 'var(--ink)',
         }}>
-          Local<em style={{ fontStyle: 'normal', color: isAdmin ? 'var(--yellow)' : 'var(--yellow-deep)' }}>Sud</em>
+          Local<em style={{ fontStyle: 'normal', color: darkBg ? 'var(--yellow)' : 'var(--yellow-deep)' }}>Sud</em>
         </div>
         {onClose && (
           <button onClick={onClose} aria-label="Fermer" style={{
             background: 'transparent', border: 'none',
-            color: isAdmin ? 'rgba(255,255,255,0.6)' : 'var(--ink-mute)',
+            color: darkBg ? 'rgba(255,255,255,0.6)' : 'var(--ink-mute)',
             fontSize: 18, cursor: 'pointer', padding: 4,
           }}>
             <i className="fa-solid fa-xmark"></i>
@@ -153,8 +140,7 @@ function NavContent({
         )}
       </div>
 
-      {/* CTA */}
-      {isAdmin ? (
+      {isAdmin && (
         <Link href="/admin/clients" style={{
           background: 'var(--yellow)', color: 'var(--ink)',
           borderRadius: 12, padding: '14px 16px', marginBottom: 24,
@@ -164,25 +150,22 @@ function NavContent({
           <span><i className="fa-solid fa-plus" style={{ marginRight: 8 }}></i> Nouveau client</span>
           <i className="fa-solid fa-arrow-right"></i>
         </Link>
-      ) : (
-        <HelpPopover />
       )}
+      {variant === 'client' && <HelpPopover />}
 
-      {/* Nav label */}
       <div style={{
         fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase',
-        color: isAdmin ? 'var(--yellow)' : 'var(--ink-mute)',
+        color: darkBg ? 'var(--yellow)' : 'var(--ink-mute)',
         fontWeight: 700, padding: '0 12px', marginBottom: 8,
       }}>
-        {isAdmin ? 'Pilotage' : 'Espace client'}
+        {isAdmin ? 'Pilotage' : isCollab ? 'Espace collaborateur' : 'Espace client'}
       </div>
 
-      {/* Nav items */}
       <nav style={{ display: 'flex', flexDirection: 'column', gap: 2, marginBottom: 24 }}>
         {items.map(item => {
-          const active = pathname === item.href || (item.href !== '/admin' && item.href !== '/espace' && pathname.startsWith(item.href))
+          const active = pathname === item.href || (item.href !== '/admin' && item.href !== '/espace' && item.href !== '/collab' && pathname.startsWith(item.href))
           return (
-            <Link key={item.href} href={item.href} style={navItemStyle(isAdmin, active)}>
+            <Link key={item.href} href={item.href} style={navItemStyle(darkBg, active)}>
               <i className={item.icon} style={{ width: 16, textAlign: 'center', fontSize: 14 }}></i>
               <span>{item.label}</span>
               {item.badge !== undefined && item.badge > 0 && (
@@ -196,11 +179,10 @@ function NavContent({
         })}
       </nav>
 
-      {/* User bottom with menu */}
       <div style={{
         marginTop: 'auto', padding: '12px 0 0',
         display: 'flex', alignItems: 'center', gap: 10,
-        borderTop: `1px solid ${isAdmin ? 'var(--ink-2)' : 'var(--line)'}`,
+        borderTop: `1px solid ${darkBg ? 'var(--ink-2)' : 'var(--line)'}`,
         position: 'relative',
       }}>
         <div style={{
@@ -209,14 +191,14 @@ function NavContent({
           display: 'grid', placeItems: 'center', fontWeight: 700, fontSize: 13,
         }}>{user.initials}</div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: isAdmin ? 'var(--white)' : 'var(--ink)' }}>{user.name}</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: darkBg ? 'var(--white)' : 'var(--ink)' }}>{user.name}</div>
           {user.subtitle && (
-            <div style={{ fontSize: 11, color: isAdmin ? 'var(--yellow)' : 'var(--ink-mute)' }}>{user.subtitle}</div>
+            <div style={{ fontSize: 11, color: darkBg ? 'var(--yellow)' : 'var(--ink-mute)' }}>{user.subtitle}</div>
           )}
         </div>
         <button onClick={() => setMenuOpen(!menuOpen)} style={{
           background: 'transparent', border: 'none',
-          color: isAdmin ? 'rgba(255,255,255,0.5)' : 'var(--ink-mute)',
+          color: darkBg ? 'rgba(255,255,255,0.5)' : 'var(--ink-mute)',
           cursor: 'pointer', padding: '0 4px',
         }}>
           <i className="fa-solid fa-ellipsis-vertical"></i>
@@ -229,24 +211,21 @@ function NavContent({
             borderRadius: 10, padding: 6, minWidth: 160,
             boxShadow: '0 8px 24px rgba(11,31,77,0.12)', zIndex: 10,
           }}>
-            <Link href={isAdmin ? '/admin/compte' : '/espace/compte'}
-                  onClick={() => setMenuOpen(false)}
-                  style={{
-                    width: '100%', padding: '8px 12px', borderRadius: 8,
-                    background: 'transparent', textAlign: 'left',
-                    fontFamily: 'inherit', fontSize: 13, color: 'var(--ink)',
-                    display: 'flex', alignItems: 'center', gap: 10,
-                    textDecoration: 'none',
-                  }}>
+            <Link href={accountHref} onClick={() => setMenuOpen(false)} style={{
+              width: '100%', padding: '8px 12px', borderRadius: 8,
+              background: 'transparent', textAlign: 'left',
+              fontFamily: 'inherit', fontSize: 13, color: 'var(--ink)',
+              display: 'flex', alignItems: 'center', gap: 10,
+              textDecoration: 'none',
+            }}>
               <i className="fa-solid fa-user-gear"></i> Mon compte
             </Link>
-            <button onClick={() => signOut({ callbackUrl: '/connexion' })}
-                    style={{
-                      width: '100%', padding: '8px 12px', borderRadius: 8, border: 'none',
-                      background: 'transparent', textAlign: 'left', cursor: 'pointer',
-                      fontFamily: 'inherit', fontSize: 13, color: 'var(--red)',
-                      display: 'flex', alignItems: 'center', gap: 10,
-                    }}>
+            <button onClick={() => signOut({ callbackUrl: '/connexion' })} style={{
+              width: '100%', padding: '8px 12px', borderRadius: 8, border: 'none',
+              background: 'transparent', textAlign: 'left', cursor: 'pointer',
+              fontFamily: 'inherit', fontSize: 13, color: 'var(--red)',
+              display: 'flex', alignItems: 'center', gap: 10,
+            }}>
               <i className="fa-solid fa-right-from-bracket"></i> Se déconnecter
             </button>
           </div>
@@ -256,8 +235,8 @@ function NavContent({
   )
 }
 
-function navItemStyle(isAdmin: boolean, active: boolean): React.CSSProperties {
-  if (isAdmin) {
+function navItemStyle(darkBg: boolean, active: boolean): React.CSSProperties {
+  if (darkBg) {
     return {
       display: 'flex', alignItems: 'center', gap: 12,
       padding: '10px 12px', borderRadius: 10,

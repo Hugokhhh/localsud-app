@@ -60,3 +60,34 @@ export async function sendResetPasswordEmail(opts: { to: string; name?: string |
     })
   } catch (e: any) { console.error('[Email] reset:', e.message) }
 }
+
+
+export async function sendCollaboratorInvitationEmail(opts: { to: string; collaboratorName: string; setupToken: string }) {
+  if (!resend) {
+    console.warn('[Email] Resend non configuré, email collab simulé pour:', opts.to)
+    console.log('[Email] Lien :', `${APP_URL}/setup?token=${opts.setupToken}`)
+    return
+  }
+  const setupUrl = `${APP_URL}/setup?token=${opts.setupToken}`
+  await resend.emails.send({
+    from: FROM,
+    to: opts.to,
+    subject: 'Bienvenue dans l\'équipe LocalSud',
+    html: `
+      <div style="font-family:'Plus Jakarta Sans',-apple-system,sans-serif;max-width:560px;margin:0 auto;padding:24px;background:#F7F8FC;">
+        <div style="background:#0B1F4D;color:white;padding:24px;border-radius:16px 16px 0 0;">
+          <div style="font-size:22px;font-weight:800;">Local<em style="font-style:normal;color:#FFCB3D;">Sud</em></div>
+          <div style="color:#FFCB3D;font-size:11px;letter-spacing:0.15em;text-transform:uppercase;font-weight:700;margin-top:6px;">Espace collaborateur</div>
+        </div>
+        <div style="background:white;padding:32px 24px;border-radius:0 0 16px 16px;border:1px solid #E7EAF3;border-top:none;">
+          <h2 style="font-size:20px;margin:0 0 12px;color:#0B1F4D;">Bonjour ${opts.collaboratorName} 👋</h2>
+          <p style="color:#4A5680;line-height:1.6;">Hugo Chey vous a invité à rejoindre l'équipe LocalSud. Vous allez pouvoir suivre et gérer les projets des clients qui vous seront assignés (retours, maquettes, statuts) depuis votre espace dédié.</p>
+          <div style="text-align:center;margin:28px 0;">
+            <a href="${setupUrl}" style="background:#FFCB3D;color:#0B1F4D;padding:14px 32px;border-radius:100px;font-weight:700;text-decoration:none;display:inline-block;">Créer mon mot de passe</a>
+          </div>
+          <p style="color:#8B93AC;font-size:12px;line-height:1.5;">Ce lien expire dans 7 jours. Si vous n'avez rien demandé, ignorez cet email.</p>
+        </div>
+      </div>
+    `,
+  })
+}

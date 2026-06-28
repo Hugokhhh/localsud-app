@@ -246,6 +246,7 @@ export function ProjectEditor({
         />
       </Section>
 
+      {currentUser?.role !== 'COLLABORATOR' && (<>
       {/* FACTURATION */}
       <Section title="Facturation" icon="fa-file-invoice"
                subtitle="Modifiez les montants et marquez les paiements reçus">

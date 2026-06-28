@@ -12,6 +12,7 @@ datasource db {
 enum Role {
   ADMIN
   CLIENT
+  COLLABORATOR
 }
 
 model User {
@@ -28,6 +29,7 @@ model User {
 
   // Tokens (création mdp, reset)
   tokens        AuthToken[]
+  assignedClients Client[] @relation("CollabClients")
 }
 
 // Tokens utilisés pour la création initiale du mot de passe et pour le reset
@@ -60,6 +62,8 @@ model Client {
   trade       String?  // Métier ("Restaurant", "Avocat", "Architecte"...)
   city        String?
   phone       String?
+  collaboratorId String?
+  collaborator   User?    @relation("CollabClients", fields: [collaboratorId], references: [id], onDelete: SetNull)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
