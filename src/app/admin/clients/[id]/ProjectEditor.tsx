@@ -352,6 +352,7 @@ export function ProjectEditor({
           <Total label="Reste à encaisser" value={formatPrice(due)} color="var(--yellow)" />
         </div>
       </Section>
+      </>)}
 
       {/* Barre sticky de sauvegarde */}
       {dirty && (
