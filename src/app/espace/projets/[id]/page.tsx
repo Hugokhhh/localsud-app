@@ -55,15 +55,26 @@ export default async function ProjetClientDetailPage({ params }: { params: { id:
             {project.estimatedDelivery && <> · Livraison {formatDate(project.estimatedDelivery)}</>}
           </div>
         </div>
-        {project.mockupUrl && (
-          <a href={project.mockupUrl} target="_blank" rel="noopener noreferrer" style={{
-            padding: '10px 18px', background: 'var(--yellow)', color: 'var(--ink)',
-            borderRadius: 100, fontWeight: 700, fontSize: 13,
-            display: 'flex', alignItems: 'center', gap: 8,
-          }}>
-            <i className="fa-solid fa-image"></i> Voir la maquette
-          </a>
-        )}
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          {project.mockupUrl && (
+            <a href={project.mockupUrl} target="_blank" rel="noopener noreferrer" style={{
+              padding: '10px 18px', background: 'var(--yellow)', color: 'var(--ink)',
+              borderRadius: 100, fontWeight: 700, fontSize: 13,
+              display: 'inline-flex', alignItems: 'center', gap: 8, textDecoration: 'none',
+            }}>
+              <i className="fa-solid fa-image"></i> Voir la maquette
+            </a>
+          )}
+          {project.documentsUrl && (
+            <a href={project.documentsUrl} target="_blank" rel="noopener noreferrer" style={{
+              padding: '10px 18px', background: 'var(--ink)', color: 'var(--white)',
+              borderRadius: 100, fontWeight: 700, fontSize: 13,
+              display: 'inline-flex', alignItems: 'center', gap: 8, textDecoration: 'none',
+            }}>
+              <i className="fa-solid fa-folder-open"></i> Accéder au Drive
+            </a>
+          )}
+        </div>
       </div>
 
       <div style={{ marginBottom: 16 }}>

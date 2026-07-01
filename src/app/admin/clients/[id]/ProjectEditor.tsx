@@ -277,9 +277,9 @@ export function ProjectEditor({
               <select value={p.status}
                       onChange={e => updatePayment(p.id, { status: e.target.value })}
                       style={smallInput}>
-                <option value="paid">✓ Payée</option>
-                <option value="pending">⏳ En attente</option>
-                <option value="overdue">❗ En retard</option>
+                <option value="PAID">✓ Payée</option>
+                <option value="PENDING">⏳ En attente</option>
+                <option value="OVERDUE">❗ En retard</option>
               </select>
               <input type="date" value={p.dueDate?.split('T')[0] || ''}
                      onChange={e => updatePayment(p.id, { dueDate: e.target.value })}
