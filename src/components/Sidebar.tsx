@@ -96,7 +96,7 @@ export function Sidebar({
       borderRight: `1px solid ${darkBg ? 'var(--ink-2)' : 'var(--line)'}`,
       padding: '20px 16px',
       display: 'flex', flexDirection: 'column',
-      height: '100vh', position: 'sticky', top: 0,
+      height: '100vh', position: 'sticky', top: 0, alignSelf: 'flex-start',
     }}>
       <NavContent variant={variant} items={items} pathname={pathname} user={user}
         menuOpen={menuOpen} setMenuOpen={setMenuOpen} accountHref={accountHref} />

@@ -10,6 +10,7 @@ export default function LoginPage() {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -57,10 +58,32 @@ export default function LoginPage() {
                  autoComplete="email" autoCapitalize="none" autoCorrect="off" spellCheck={false}
                  placeholder="contact@votre-entreprise.fr" style={inputStyle} />
         </Field>
+
         <Field label="Mot de passe">
-          <input type="password" value={password} onChange={e => setPassword(e.target.value)} required
-                 autoComplete="current-password" autoCapitalize="none" autoCorrect="off" spellCheck={false}
-                 placeholder="••••••••" style={inputStyle} />
+          <div style={{ position: 'relative' }}>
+            <input
+              type={showPassword ? 'text' : 'password'}
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              required
+              autoComplete="current-password" autoCapitalize="none" autoCorrect="off" spellCheck={false}
+              placeholder="••••••••"
+              style={{ ...inputStyle, paddingRight: 44 }}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(v => !v)}
+              aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+              style={{
+                position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
+                background: 'transparent', border: 'none', cursor: 'pointer',
+                color: 'var(--ink-mute)', padding: 8, fontSize: 15, lineHeight: 1,
+                display: 'grid', placeItems: 'center',
+              }}
+            >
+              <i className={`fa-solid ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
+            </button>
+          </div>
         </Field>
 
         {error && (

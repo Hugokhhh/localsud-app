@@ -23,6 +23,7 @@ function SetupPage() {
   const [name, setName] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [done, setDone] = useState(false)
@@ -112,7 +113,12 @@ function SetupPage() {
           <input type="email" value={email} readOnly style={{ ...inputStyle, background: 'var(--bg)', color: 'var(--ink-mute)' }} />
         </Field>
         <Field label="Nouveau mot de passe">
-          <input type="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder="••••••••" style={inputStyle} />
+          <div style={{ position: 'relative' }}>
+            <input type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} required placeholder="••••••••" style={{ ...inputStyle, paddingRight: 44 }} />
+            <button type="button" onClick={() => setShowPassword(v => !v)} aria-label="Afficher/masquer" style={eyeBtn}>
+              <i className={`fa-solid ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
+            </button>
+          </div>
           <div style={{ marginTop: 8 }}>
             <div style={{ display: 'flex', gap: 4, marginBottom: 4 }}>
               {[0, 1, 2, 3].map(i => (
@@ -128,7 +134,7 @@ function SetupPage() {
           </div>
         </Field>
         <Field label="Confirmer le mot de passe">
-          <input type="password" value={confirm} onChange={e => setConfirm(e.target.value)} required placeholder="••••••••" style={inputStyle} />
+          <input type={showPassword ? 'text' : 'password'} value={confirm} onChange={e => setConfirm(e.target.value)} required placeholder="••••••••" style={inputStyle} />
         </Field>
         {error && (
           <div style={{ background: 'var(--red-soft)', color: 'var(--red)', padding: '10px 14px', borderRadius: 10, fontSize: 13, fontWeight: 600, marginBottom: 14 }}>
@@ -144,6 +150,7 @@ function SetupPage() {
 }
 
 const inputStyle: React.CSSProperties = { width: '100%', padding: '12px 14px', border: '1px solid var(--line)', borderRadius: 10, fontFamily: 'inherit', fontSize: 14, outline: 'none' }
+const eyeBtn: React.CSSProperties = { position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--ink-mute)', padding: 8, fontSize: 15, display: 'grid', placeItems: 'center' }
 const primaryBtn: React.CSSProperties = { width: '100%', background: 'var(--ink)', color: 'white', border: 'none', padding: 13, borderRadius: 100, fontWeight: 600, fontSize: 14, fontFamily: 'inherit', marginTop: 6, cursor: 'pointer' }
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (

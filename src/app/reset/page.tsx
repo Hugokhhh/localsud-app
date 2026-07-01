@@ -21,6 +21,7 @@ function ResetPage() {
   const [valid, setValid] = useState<boolean | null>(null)
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [done, setDone] = useState(false)
@@ -85,11 +86,16 @@ function ResetPage() {
       <form onSubmit={handleSubmit}>
         <div style={{ marginBottom: 14 }}>
           <label style={lbl}>Nouveau mot de passe</label>
-          <input type="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder="••••••••" style={inputStyle} />
+          <div style={{ position: 'relative' }}>
+            <input type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} required placeholder="••••••••" style={{ ...inputStyle, paddingRight: 44 }} />
+            <button type="button" onClick={() => setShowPassword(v => !v)} aria-label="Afficher/masquer" style={eyeBtn}>
+              <i className={`fa-solid ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
+            </button>
+          </div>
         </div>
         <div style={{ marginBottom: 14 }}>
           <label style={lbl}>Confirmation</label>
-          <input type="password" value={confirm} onChange={e => setConfirm(e.target.value)} required placeholder="••••••••" style={inputStyle} />
+          <input type={showPassword ? 'text' : 'password'} value={confirm} onChange={e => setConfirm(e.target.value)} required placeholder="••••••••" style={inputStyle} />
         </div>
         {error && (
           <div style={{ background: 'var(--red-soft)', color: 'var(--red)', padding: '10px 14px', borderRadius: 10, fontSize: 13, fontWeight: 600, marginBottom: 14 }}>{error}</div>
@@ -104,4 +110,5 @@ function ResetPage() {
 
 const inputStyle: React.CSSProperties = { width: '100%', padding: '12px 14px', border: '1px solid var(--line)', borderRadius: 10, fontFamily: 'inherit', fontSize: 14, outline: 'none' }
 const lbl: React.CSSProperties = { display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--ink-soft)', marginBottom: 6 }
+const eyeBtn: React.CSSProperties = { position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--ink-mute)', padding: 8, fontSize: 15, display: 'grid', placeItems: 'center' }
 const primaryBtn: React.CSSProperties = { width: '100%', background: 'var(--ink)', color: 'white', border: 'none', padding: 13, borderRadius: 100, fontWeight: 600, fontSize: 14, fontFamily: 'inherit', marginTop: 6, cursor: 'pointer' }
