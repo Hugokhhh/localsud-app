@@ -25,13 +25,21 @@
 html, body { margin: 0; padding: 0; overflow-x: hidden; }
 body { font-family: 'Plus Jakarta Sans', -apple-system, sans-serif; }
 
-/* Supprime le délai de 300ms au tap + les clics fantômes sur mobile/trackpad.
-   C'est la cause principale du "je dois cliquer plusieurs fois". */
-button, a, select, [role="button"], input[type="submit"], label {
+/* ============================================================
+   FLUIDITÉ DES CLICS — élimine le "je dois cliquer 2 fois"
+   ============================================================ */
+/* 1. Supprime le délai de 300ms au tap sur TOUS les éléments interactifs */
+button, a, select, textarea, input, [role="button"], [onclick], label, summary {
   touch-action: manipulation;
 }
-/* Empêche le double-tap zoom d'avaler le premier clic */
+/* 2. Supprime le flash bleu iOS qui donne l'impression que le tap n'a pas marché */
 * { -webkit-tap-highlight-color: transparent; }
+/* 3. Garantit un curseur main sur tout ce qui est cliquable (feedback immédiat) */
+button:not(:disabled), a, select, [role="button"], label[for] { cursor: pointer; }
+/* 4. Empêche la sélection de texte parasite au double-tap sur les boutons */
+button, a, [role="button"] { -webkit-user-select: none; user-select: none; }
+/* 5. Zone de clic minimale confortable (évite de rater la cible = re-clic) */
+button, a[role="button"] { min-height: 32px; }
 
 input[type=number]::-webkit-outer-spin-button,
 input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }

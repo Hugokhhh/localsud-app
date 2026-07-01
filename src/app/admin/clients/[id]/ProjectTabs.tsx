@@ -37,6 +37,7 @@ export function ProjectTabs({
               <Link
                 key={p.id}
                 href={`/admin/clients/${clientId}?projectId=${p.id}`}
+                prefetch={true}
                 style={{
                   padding: '8px 14px', borderRadius: 8,
                   background: active ? 'var(--white)' : 'transparent',
