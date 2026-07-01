@@ -28,158 +28,156 @@ export default async function FacturesClientPage() {
   const projects = client?.projects || []
   if (projects.length === 0) return <div>Aucun projet en cours.</div>
 
-  const allPayments = projects.flatMap(p => p.payments)
+  const allPayments = projects.flatMap(p => p.payments.map(pay => ({ ...pay, projectName: p.name })))
   const totalBilling = computeBilling(allPayments as any[])
+
+  // Timeline chronologique : payées d'abord (par date), puis à venir (par échéance)
+  const timeline = [...allPayments].sort((a, b) => {
+    const da = a.paidAt ? new Date(a.paidAt).getTime() : a.dueDate ? new Date(a.dueDate).getTime() : 0
+    const db = b.paidAt ? new Date(b.paidAt).getTime() : b.dueDate ? new Date(b.dueDate).getTime() : 0
+    return da - db
+  })
 
   return (
     <div>
-      <h1 style={{ fontSize: 32, fontWeight: 800, letterSpacing: '-0.03em', marginBottom: 6, color: 'var(--ink)' }}>
+      <h1 style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-0.03em', marginBottom: 6, color: 'var(--ink)' }}>
         Mes <em style={{ color: 'var(--yellow-deep)', fontStyle: 'italic' }}>factures</em>
       </h1>
       <p style={{ color: 'var(--ink-mute)', fontSize: 14, marginBottom: 28 }}>
-        Suivez l'avancement de vos paiements et téléchargez vos factures sur tous vos projets.
+        Récapitulatif des sommes versées et restant à régler sur vos projets.
       </p>
 
-      {/* HERO */}
-      <div style={{
-        background: 'var(--ink)', color: 'white', borderRadius: 20,
-        padding: '32px 36px', marginBottom: 28,
-      }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 32 }}>
-          <HeroBlock label="Montant total" value={formatPrice(totalBilling.total)}
-                     sub={`${allPayments.length} échéance${allPayments.length > 1 ? 's' : ''}`} />
-          <HeroBlock label="Déjà payé" value={formatPrice(totalBilling.paid)}
-                     sub={`${totalBilling.progress}% du total`} color="green" icon="fa-check" />
-          <HeroBlock label="Reste à régler" value={formatPrice(totalBilling.remaining)}
-                     sub={TVA_MENTION} color="yellow" icon="fa-hourglass" />
+      {/* === 3 STATS === */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14, marginBottom: 20 }}>
+        <div style={{ background: 'var(--white)', border: '1px solid var(--line)', borderRadius: 14, padding: 20 }}>
+          <div style={statLabel}>Montant total</div>
+          <div style={statValue}>{formatPrice(totalBilling.total)}</div>
+          <div style={statSub}>{allPayments.length} échéance{allPayments.length > 1 ? 's' : ''}</div>
+        </div>
+        <div style={{ background: 'var(--green-soft)', borderRadius: 14, padding: 20 }}>
+          <div style={{ ...statLabel, color: 'var(--green)' }}><i className="fa-solid fa-check"></i> Payé</div>
+          <div style={{ ...statValue, color: 'var(--green)' }}>{formatPrice(totalBilling.paid)}</div>
+          <div style={statSub}>{totalBilling.progress}% du total</div>
+        </div>
+        <div style={{ background: 'var(--yellow-soft)', borderRadius: 14, padding: 20 }}>
+          <div style={{ ...statLabel, color: 'var(--yellow-deep)' }}><i className="fa-solid fa-clock"></i> Reste à régler</div>
+          <div style={{ ...statValue, color: 'var(--yellow-deep)' }}>{formatPrice(totalBilling.remaining)}</div>
+          <div style={statSub}>{100 - totalBilling.progress}% du total</div>
         </div>
       </div>
 
-      {/* Sections par projet */}
-      {projects.map(project => {
-        const billing = computeBilling(project.payments as any[])
-        if (project.payments.length === 0) return null
+      {/* === BARRE DE PROGRESSION GLOBALE === */}
+      <div style={{ background: 'var(--white)', border: '1px solid var(--line)', borderRadius: 16, padding: 24, marginBottom: 28 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)' }}>Progression du paiement</div>
+          <div style={{ fontSize: 13, color: 'var(--ink-soft)' }}>
+            <b style={{ color: 'var(--green)' }}>{formatPrice(totalBilling.paid)}</b> versés sur {formatPrice(totalBilling.total)}
+          </div>
+        </div>
+        <div style={{ height: 14, background: 'var(--bg)', borderRadius: 100, overflow: 'hidden', position: 'relative' }}>
+          <div style={{
+            width: `${totalBilling.progress}%`, height: '100%',
+            background: 'linear-gradient(90deg, var(--green) 0%, #1BA85A 100%)',
+            borderRadius: 100, transition: 'width 0.4s',
+            display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 8,
+          }}>
+            {totalBilling.progress >= 15 && (
+              <span style={{ fontSize: 10, fontWeight: 800, color: 'white' }}>{totalBilling.progress}%</span>
+            )}
+          </div>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontSize: 11, color: 'var(--ink-mute)' }}>
+          <span>Début du projet</span>
+          <span>Paiement complet</span>
+        </div>
+      </div>
 
-        return (
-          <div key={project.id} style={{ marginBottom: 32 }}>
-            <div style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              marginBottom: 14, flexWrap: 'wrap', gap: 8,
-            }}>
-              <div>
-                <h2 style={{ fontSize: 20, fontWeight: 800, color: 'var(--ink)', letterSpacing: '-0.02em' }}>{project.name}</h2>
-                <div style={{ fontSize: 12, color: 'var(--ink-mute)', marginTop: 2 }}>
-                  {billing.progress}% payé
+      {/* === TIMELINE / HISTORIQUE === */}
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--ink-mute)', fontWeight: 700, marginBottom: 4 }}>
+          Échéancier
+        </div>
+        <h2 style={{ fontSize: 20, fontWeight: 800, color: 'var(--ink)' }}>Historique des paiements</h2>
+      </div>
+
+      <div style={{ position: 'relative', paddingLeft: 8 }}>
+        {timeline.map((p, i) => {
+          const meta = STATUS_META[p.status] || STATUS_META.PENDING
+          const isLast = i === timeline.length - 1
+          return (
+            <div key={p.id} style={{ display: 'flex', gap: 18, position: 'relative' }}>
+              {/* Ligne verticale + point */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
+                <div style={{
+                  width: 36, height: 36, borderRadius: '50%',
+                  background: meta.bg, color: meta.text,
+                  display: 'grid', placeItems: 'center', fontSize: 14,
+                  border: '3px solid var(--white)', boxShadow: '0 0 0 1px var(--line)',
+                  zIndex: 1,
+                }}>
+                  <i className={`fa-solid ${meta.icon}`}></i>
                 </div>
+                {!isLast && <div style={{ width: 2, flex: 1, background: 'var(--line)', minHeight: 20 }} />}
               </div>
-              <div style={{ fontSize: 14, color: 'var(--ink-soft)', fontWeight: 600 }}>
-                {formatPrice(billing.paid)} / <b style={{ color: 'var(--ink)' }}>{formatPrice(billing.total)}</b>
-              </div>
-            </div>
 
-            <div style={{
-              background: 'var(--white)', border: '1px solid var(--line)',
-              borderRadius: 16, overflow: 'hidden',
-            }}>
-              {project.payments.map((p, i) => {
-                const meta = STATUS_META[p.status] || STATUS_META.PENDING
-                return (
-                  <div key={p.id} style={{
-                    display: 'grid',
-                    gridTemplateColumns: '44px 1fr auto auto',
-                    gap: 14, alignItems: 'center',
-                    padding: '16px 18px',
-                    borderTop: i > 0 ? '1px solid var(--line-soft)' : 'none',
-                  }}>
-                    {/* Icone status */}
-                    <div style={{
-                      width: 38, height: 38, borderRadius: 10,
-                      background: meta.bg, color: meta.text,
-                      display: 'grid', placeItems: 'center', fontSize: 15,
-                    }}>
-                      <i className={`fa-solid ${meta.icon}`}></i>
-                    </div>
-
-                    {/* Infos échéance */}
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)', marginBottom: 3 }}>
-                        {p.label}
-                        {p.invoiceRef && (
-                          <span style={{ fontSize: 11, color: 'var(--ink-mute)', fontWeight: 500, marginLeft: 8 }}>
-                            · Réf. {p.invoiceRef}
-                          </span>
-                        )}
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                        <span style={{
-                          fontSize: 11, padding: '2px 9px', borderRadius: 100,
-                          background: meta.bg, color: meta.text, fontWeight: 700,
-                        }}>
-                          {meta.label}
-                        </span>
-                        {p.status === 'PAID' && p.paidAt ? (
-                          <span style={{ fontSize: 12, color: 'var(--ink-mute)' }}>
-                            Réglée le {formatDate(p.paidAt)}
-                          </span>
-                        ) : p.dueDate ? (
-                          <span style={{ fontSize: 12, color: p.status === 'OVERDUE' ? 'var(--red)' : 'var(--ink-mute)' }}>
-                            {p.status === 'OVERDUE' ? 'Échéance dépassée : ' : 'À régler avant le '}
-                            {formatDate(p.dueDate)}
-                          </span>
-                        ) : null}
-                      </div>
-                    </div>
-
-                    {/* Montant */}
-                    <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--ink)', whiteSpace: 'nowrap' }}>
-                      {formatPrice(Number(p.amount))}
-                    </div>
-
-                    {/* Téléchargement PDF */}
-                    {p.pdfUrl ? (
-                      <a href={p.pdfUrl} target="_blank" rel="noopener noreferrer" download style={{
-                        padding: '9px 14px', background: 'var(--bg)', color: 'var(--ink)',
-                        borderRadius: 10, fontSize: 12, fontWeight: 700,
-                        display: 'inline-flex', alignItems: 'center', gap: 8,
-                        textDecoration: 'none', border: '1px solid var(--line)',
-                      }} title={`${p.pdfName || 'facture.pdf'} · ${formatFileSize(p.pdfSize || 0)}`}>
-                        <i className="fa-solid fa-file-pdf" style={{ color: 'var(--red)' }}></i>
-                        Facture PDF
-                      </a>
-                    ) : (
-                      <span style={{
-                        padding: '9px 14px', color: 'var(--ink-mute)',
-                        fontSize: 11, fontWeight: 600, fontStyle: 'italic',
-                      }}>
-                        PDF à venir
+              {/* Contenu */}
+              <div style={{
+                flex: 1, marginBottom: isLast ? 0 : 16,
+                background: 'var(--white)', border: '1px solid var(--line)',
+                borderRadius: 14, padding: '14px 18px',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
+                      <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--ink)' }}>{p.label}</span>
+                      <span style={{ fontSize: 11, padding: '2px 9px', borderRadius: 100, background: meta.bg, color: meta.text, fontWeight: 700 }}>
+                        {meta.label}
                       </span>
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--ink-mute)' }}>
+                      {p.projectName}
+                      {p.invoiceRef && <> · Réf. {p.invoiceRef}</>}
+                      {' · '}
+                      {p.status === 'PAID' && p.paidAt
+                        ? `Réglée le ${formatDate(p.paidAt)}`
+                        : p.dueDate
+                        ? (p.status === 'OVERDUE' ? `En retard depuis le ${formatDate(p.dueDate)}` : `À régler avant le ${formatDate(p.dueDate)}`)
+                        : 'Date non définie'}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                    <div style={{
+                      fontSize: 18, fontWeight: 800, whiteSpace: 'nowrap',
+                      color: p.status === 'PAID' ? 'var(--green)' : p.status === 'OVERDUE' ? 'var(--red)' : 'var(--yellow-deep)',
+                    }}>
+                      {p.status === 'PAID' ? '+ ' : ''}{formatPrice(Number(p.amount))}
+                    </div>
+                    {p.pdfUrl && (
+                      <a href={p.pdfUrl} target="_blank" rel="noopener noreferrer" download style={{
+                        padding: '8px 12px', background: 'var(--bg)', color: 'var(--ink)',
+                        borderRadius: 10, fontSize: 12, fontWeight: 700,
+                        display: 'inline-flex', alignItems: 'center', gap: 6,
+                        textDecoration: 'none', border: '1px solid var(--line)',
+                      }} title={`${p.pdfName || 'facture.pdf'}${p.pdfSize ? ' · ' + formatFileSize(p.pdfSize) : ''}`}>
+                        <i className="fa-solid fa-file-pdf" style={{ color: 'var(--red)' }}></i> PDF
+                      </a>
                     )}
                   </div>
-                )
-              })}
+                </div>
+              </div>
             </div>
-          </div>
-        )
-      })}
+          )
+        })}
+      </div>
+
+      <div style={{ fontSize: 11, color: 'var(--ink-mute)', marginTop: 18, textAlign: 'center' }}>
+        {TVA_MENTION}
+      </div>
     </div>
   )
 }
 
-function HeroBlock({
-  label, value, sub, color, icon,
-}: { label: string; value: string; sub: string; color?: string; icon?: string }) {
-  const accent = color === 'green' ? 'var(--green)' : color === 'yellow' ? 'var(--yellow)' : 'white'
-  return (
-    <div>
-      <div style={{
-        fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase',
-        color: 'rgba(255,255,255,0.6)', fontWeight: 700, marginBottom: 6,
-      }}>{label}</div>
-      <div style={{ fontSize: 36, fontWeight: 800, color: accent, lineHeight: 1, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 12 }}>
-        {icon && <i className={`fa-solid ${icon}`} style={{ fontSize: 22 }}></i>}
-        {value}
-      </div>
-      <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{sub}</div>
-    </div>
-  )
-}
+const statLabel: React.CSSProperties = { fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 700, color: 'var(--ink-mute)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }
+const statValue: React.CSSProperties = { fontSize: 28, fontWeight: 800, color: 'var(--ink)', lineHeight: 1 }
+const statSub: React.CSSProperties = { fontSize: 12, color: 'var(--ink-mute)', marginTop: 6 }
