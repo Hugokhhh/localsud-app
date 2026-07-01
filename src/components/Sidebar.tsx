@@ -90,18 +90,23 @@ export function Sidebar({
   }
 
   return (
-    <aside style={{
-      width: 260, flexShrink: 0,
-      background: darkBg ? 'var(--ink)' : 'var(--white)',
-      borderRight: `1px solid ${darkBg ? 'var(--ink-2)' : 'var(--line)'}`,
-      padding: '20px 16px',
-      display: 'flex', flexDirection: 'column',
-      height: '100vh', maxHeight: '100vh', overflowY: 'auto',
-      position: 'sticky', top: 0, alignSelf: 'flex-start',
-    }}>
-      <NavContent variant={variant} items={items} pathname={pathname} user={user}
-        menuOpen={menuOpen} setMenuOpen={setMenuOpen} accountHref={accountHref} />
-    </aside>
+    <>
+      {/* Spacer qui réserve la largeur de la sidebar dans le flux */}
+      <div style={{ width: 260, flexShrink: 0 }} aria-hidden="true" />
+      {/* Sidebar fixe : immunisée contre overflow-x hidden du body */}
+      <aside style={{
+        width: 260,
+        background: darkBg ? 'var(--ink)' : 'var(--white)',
+        borderRight: `1px solid ${darkBg ? 'var(--ink-2)' : 'var(--line)'}`,
+        padding: '20px 16px',
+        display: 'flex', flexDirection: 'column',
+        height: '100vh', overflowY: 'auto',
+        position: 'fixed', top: 0, left: 0, zIndex: 40,
+      }}>
+        <NavContent variant={variant} items={items} pathname={pathname} user={user}
+          menuOpen={menuOpen} setMenuOpen={setMenuOpen} accountHref={accountHref} />
+      </aside>
+    </>
   )
 }
 
