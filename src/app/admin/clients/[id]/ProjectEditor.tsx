@@ -133,16 +133,10 @@ export function ProjectEditor({
 
   function updatePayment(id: string, patch: Partial<Payment>) {
     setPayments(payments.map(p => p.id === id ? { ...p, ...patch } : p))
-    // Si patch contient un statut ET le payment existe en base, on persiste tout de suite
-    if (patch.status && !id.startsWith('new-')) {
-      fetch(`/api/payments?id=${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: patch.status }),
-      }).then(() => router.refresh()).catch(() => {})
-    } else {
-      markDirty()
-    }
+    // On marque simplement comme "modifié" : la sauvegarde se fait via le bouton
+    // "Enregistrer" (barre sticky). Plus de fetch immédiat + router.refresh() qui
+    // écrasait les autres champs en cours d'édition.
+    markDirty()
   }
 
   async function uploadPdf(paymentId: string, file: File) {
@@ -271,9 +265,17 @@ export function ProjectEditor({
               <i className="fa-solid fa-grip-vertical" style={{ color: 'var(--ink-mute)' }}></i>
               <input value={p.label} onChange={e => updatePayment(p.id, { label: e.target.value })}
                      placeholder="Libellé" style={smallInput} />
-              <input type="number" value={p.amount}
-                     onChange={e => updatePayment(p.id, { amount: parseFloat(e.target.value) || 0 })}
-                     placeholder="Montant" style={smallInput} />
+              <input
+                type="text" inputMode="decimal" value={p.amount}
+                onChange={e => {
+                  const raw = e.target.value.replace(',', '.')
+                  // n'accepte que chiffres et un point décimal
+                  if (raw === '' || /^\d*\.?\d*$/.test(raw)) {
+                    updatePayment(p.id, { amount: raw === '' ? 0 : Number(raw) })
+                  }
+                }}
+                onWheel={e => (e.target as HTMLInputElement).blur()}
+                placeholder="Montant" style={smallInput} />
               <select value={p.status}
                       onChange={e => updatePayment(p.id, { status: e.target.value })}
                       style={smallInput}>
