@@ -2,7 +2,7 @@ import { redirect, notFound } from 'next/navigation'
 import { getCurrentUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { CommentThread } from '@/components/CommentThread'
-import { computeBilling, formatPrice, formatDate, PROJECT_STATUS, PROJECT_TYPE } from '@/lib/utils'
+import { computeBilling, formatPrice, formatDate, PROJECT_STATUS, PROJECT_TYPE, externalUrl } from '@/lib/utils'
 import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
@@ -88,7 +88,7 @@ export default async function ProjetClientDetailPage({
           {/* Ressources rapides */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14, marginBottom: 22 }}>
 
-            <Link href={project.mockupUrl ? project.mockupUrl : `/espace/projets/${project.id}?tab=maquette`}
+            <Link href={project.mockupUrl ? externalUrl(project.mockupUrl) : `/espace/projets/${project.id}?tab=maquette`}
               target={project.mockupUrl ? '_blank' : undefined}
               rel="noopener noreferrer" style={resCardStyle}>
               <div style={{ ...resStatus, background: 'var(--yellow-soft)', color: 'var(--yellow-deep)' }}>
@@ -117,7 +117,7 @@ export default async function ProjetClientDetailPage({
               <div style={resCtaStyle}>Ouvrir <i className="fa-solid fa-arrow-right" style={{ marginLeft: 6 }}></i></div>
             </Link>
 
-            <Link href={project.documentsUrl ? project.documentsUrl : '#'}
+            <Link href={project.documentsUrl ? externalUrl(project.documentsUrl) : '#'}
               target={project.documentsUrl ? '_blank' : undefined}
               rel="noopener noreferrer" style={resCardStyle}>
               <div style={{ ...resStatus, background: 'var(--bg)', color: 'var(--ink-soft)' }}>
@@ -190,7 +190,7 @@ export default async function ProjetClientDetailPage({
                 </div>
               </div>
               {project.mockupUrl && (
-                <a href={project.mockupUrl} target="_blank" rel="noopener noreferrer" style={{
+                <a href={externalUrl(project.mockupUrl)} target="_blank" rel="noopener noreferrer" style={{
                   padding: '13px 22px', background: 'var(--yellow)', color: 'var(--ink)',
                   borderRadius: 100, fontWeight: 700, fontSize: 13,
                   display: 'inline-flex', alignItems: 'center', gap: 8, textDecoration: 'none',

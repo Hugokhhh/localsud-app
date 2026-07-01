@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { computeBilling, formatPrice, formatDate, PROJECT_STATUS, PROJECT_TYPE } from '@/lib/utils'
+import { computeBilling, formatPrice, formatDate, PROJECT_STATUS, PROJECT_TYPE, externalUrl } from '@/lib/utils'
 import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
@@ -96,7 +96,7 @@ export default async function MesProjetsPage() {
 
                   {/* MAQUETTE */}
                   {project.mockupUrl ? (
-                    <a href={project.mockupUrl} target="_blank" rel="noopener noreferrer" style={actionBtn('var(--blue-soft)', 'var(--ink)')}>
+                    <a href={externalUrl(project.mockupUrl)} target="_blank" rel="noopener noreferrer" style={actionBtn('var(--blue-soft)', 'var(--ink)')}>
                       <div style={actionIcon('var(--blue-soft)', 'var(--ink)')}>
                         <i className="fa-solid fa-image"></i>
                       </div>
@@ -138,7 +138,7 @@ export default async function MesProjetsPage() {
 
                   {/* DRIVE (si dispo) */}
                   {project.documentsUrl && (
-                    <a href={project.documentsUrl} target="_blank" rel="noopener noreferrer" style={actionBtn('var(--bg)', 'var(--ink)')}>
+                    <a href={externalUrl(project.documentsUrl)} target="_blank" rel="noopener noreferrer" style={actionBtn('var(--bg)', 'var(--ink)')}>
                       <div style={actionIcon('var(--bg)', 'var(--ink)')}>
                         <i className="fa-solid fa-folder-open"></i>
                       </div>

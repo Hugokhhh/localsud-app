@@ -93,3 +93,15 @@ export const PROJECT_TYPE = {
 export function initials(name: string): string {
   return name.trim().split(/\s+/).slice(0, 2).map(w => w[0]?.toUpperCase()).join('')
 }
+
+
+/** Normalise un lien externe : ajoute https:// s'il manque le protocole.
+ *  Évite le 404 quand un admin saisit "exemple.fr" au lieu de "https://exemple.fr". */
+export function externalUrl(url: string | null | undefined): string {
+  if (!url) return '#'
+  const trimmed = url.trim()
+  if (!trimmed) return '#'
+  if (/^https?:\/\//i.test(trimmed)) return trimmed
+  if (trimmed.startsWith('/')) return trimmed  // lien interne
+  return 'https://' + trimmed
+}

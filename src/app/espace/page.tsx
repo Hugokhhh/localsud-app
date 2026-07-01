@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { computeBilling, formatPrice, formatDate, timeAgo, PROJECT_STATUS, PROJECT_TYPE } from '@/lib/utils'
+import { computeBilling, formatPrice, formatDate, timeAgo, PROJECT_STATUS, PROJECT_TYPE, externalUrl } from '@/lib/utils'
 import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
@@ -80,7 +80,7 @@ export default async function EspaceAccueilPage() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
 
           {/* Card Maquette */}
-          <Link href={mainProject.mockupUrl ? mainProject.mockupUrl : `/espace/projets/${mainProject.id}`}
+          <Link href={mainProject.mockupUrl ? externalUrl(mainProject.mockupUrl) : `/espace/projets/${mainProject.id}`}
             target={mainProject.mockupUrl ? '_blank' : undefined}
             rel="noopener noreferrer"
             style={resCardStyle}>
@@ -116,7 +116,7 @@ export default async function EspaceAccueilPage() {
           </Link>
 
           {/* Card Documents / Drive */}
-          <Link href={mainProject.documentsUrl ? mainProject.documentsUrl : `/espace/projets/${mainProject.id}`}
+          <Link href={mainProject.documentsUrl ? externalUrl(mainProject.documentsUrl) : `/espace/projets/${mainProject.id}`}
             target={mainProject.documentsUrl ? '_blank' : undefined}
             rel="noopener noreferrer"
             style={resCardStyle}>
