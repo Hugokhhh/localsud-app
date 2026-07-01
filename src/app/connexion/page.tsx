@@ -17,14 +17,27 @@ export default function LoginPage() {
     e.preventDefault()
     setError('')
     setLoading(true)
+
+    // Trim défensif : évite les espaces invisibles depuis les gestionnaires
+    // de mots de passe (1Password, Chrome, iCloud Keychain) ou l'auto-fill mobile
+    const cleanEmail = email.trim().toLowerCase()
+    const cleanPassword = password.trim()
+
+    if (!cleanEmail || !cleanPassword) {
+      setError('Email et mot de passe requis')
+      setLoading(false)
+      return
+    }
+
     const result = await signIn('credentials', {
-      email, password, redirect: false,
+      email: cleanEmail,
+      password: cleanPassword,
+      redirect: false,
     })
     setLoading(false)
     if (result?.error) {
       setError('Email ou mot de passe incorrect')
     } else {
-      // Redirection — l'utilisateur est routé selon son rôle par le middleware
       router.push('/')
       router.refresh()
     }
@@ -41,10 +54,12 @@ export default function LoginPage() {
       <form onSubmit={handleSubmit}>
         <Field label="Email">
           <input type="email" value={email} onChange={e => setEmail(e.target.value)} required
+                 autoComplete="email" autoCapitalize="none" autoCorrect="off" spellCheck={false}
                  placeholder="contact@votre-entreprise.fr" style={inputStyle} />
         </Field>
         <Field label="Mot de passe">
           <input type="password" value={password} onChange={e => setPassword(e.target.value)} required
+                 autoComplete="current-password" autoCapitalize="none" autoCorrect="off" spellCheck={false}
                  placeholder="••••••••" style={inputStyle} />
         </Field>
 

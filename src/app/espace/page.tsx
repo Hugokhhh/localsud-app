@@ -18,11 +18,7 @@ export default async function EspaceAccueilPage() {
       projects: {
         include: {
           payments: { orderBy: { order: 'asc' } },
-          comments: {
-            include: { author: { select: { name: true, role: true } } },
-            orderBy: { createdAt: 'desc' },
-            take: 5,
-          },
+          comments: { orderBy: { createdAt: 'desc' }, take: 5 },
         },
         orderBy: { createdAt: 'desc' },
       },
@@ -39,6 +35,16 @@ export default async function EspaceAccueilPage() {
     )
   }
 
+  // Récupérer les auteurs des derniers commentaires (via authorMap)
+  const allCommentAuthorIds = [
+    ...new Set(projects.flatMap(p => p.comments.map(c => c.authorId))),
+  ]
+  const authors = await prisma.user.findMany({
+    where: { id: { in: allCommentAuthorIds } },
+    select: { id: true, name: true, role: true },
+  })
+  const authorMap = Object.fromEntries(authors.map(a => [a.id, a]))
+
   const totalBilling = projects.reduce((acc, p) => {
     const b = computeBilling(p.payments as any[])
     return { total: acc.total + b.total, paid: acc.paid + b.paid, remaining: acc.remaining + b.remaining }
@@ -49,7 +55,7 @@ export default async function EspaceAccueilPage() {
     0
   )
 
-  // Prochaine échéance à payer (tous projets confondus)
+  // Prochaine échéance à payer
   const upcomingPayment = projects
     .flatMap(p => p.payments.map(pay => ({ ...pay, projectName: p.name })))
     .filter(p => p.status === 'PENDING' || p.status === 'OVERDUE')
@@ -59,9 +65,14 @@ export default async function EspaceAccueilPage() {
       return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
     })[0]
 
-  // Activité récente (5 derniers commentaires tous projets confondus)
+  // Activité récente (4 derniers commentaires tous projets confondus)
   const recentActivity = projects
-    .flatMap(p => p.comments.map(c => ({ ...c, projectName: p.name, projectId: p.id })))
+    .flatMap(p => p.comments.map(c => ({
+      ...c,
+      projectName: p.name,
+      projectId: p.id,
+      author: authorMap[c.authorId] || { name: 'Utilisateur', role: 'CLIENT' },
+    })))
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 4)
 
@@ -75,7 +86,6 @@ export default async function EspaceAccueilPage() {
         }
       </p>
 
-      {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14, marginBottom: 24 }}>
         <StatCard label="Projets" value={String(projects.length)} icon="fa-folder-open" color="var(--ink)" />
         <StatCard label="Retours ouverts" value={String(totalOpenComments)} icon="fa-comments" color="var(--red)" />
@@ -83,7 +93,6 @@ export default async function EspaceAccueilPage() {
         <StatCard label="Reste à régler" value={formatPrice(totalBilling.remaining)} icon="fa-hourglass" color="var(--yellow-deep)" />
       </div>
 
-      {/* Prochaine échéance */}
       {upcomingPayment && (
         <div style={{
           background: upcomingPayment.status === 'OVERDUE' ? '#FEE9E7' : '#FFF7D6',
@@ -124,7 +133,6 @@ export default async function EspaceAccueilPage() {
         </div>
       )}
 
-      {/* Section projets */}
       <div style={{ marginBottom: 16 }}>
         <div style={sectionKicker}>Mes projets</div>
         <h2 style={sectionTitle}>{projects.length === 1 ? 'Votre projet' : 'Tous vos projets'}</h2>
@@ -139,7 +147,6 @@ export default async function EspaceAccueilPage() {
 
           return (
             <Link key={project.id} href={`/espace/projets/${project.id}`} style={projectCardStyle}>
-              {/* Ligne 1 : type + statut + retours */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 10, flexWrap: 'wrap' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <span style={{ fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ink-mute)', fontWeight: 700 }}>
@@ -165,7 +172,6 @@ export default async function EspaceAccueilPage() {
                 {project.name}
               </div>
 
-              {/* Timeline visuelle */}
               <div style={{ display: 'flex', gap: 4, marginBottom: 16 }}>
                 {STATUS_ORDER.map((s, idx) => {
                   const isDone = idx < currentStepIdx
@@ -189,7 +195,6 @@ export default async function EspaceAccueilPage() {
                 })}
               </div>
 
-              {/* Ligne 3 : actions rapides + prix */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', paddingTop: 14, borderTop: '1px solid var(--line)' }}>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   {project.mockupUrl && (
@@ -225,7 +230,6 @@ export default async function EspaceAccueilPage() {
         })}
       </div>
 
-      {/* Activité récente */}
       {recentActivity.length > 0 && (
         <>
           <div style={{ marginBottom: 16 }}>
