@@ -25,6 +25,14 @@
 html, body { margin: 0; padding: 0; overflow-x: hidden; }
 body { font-family: 'Plus Jakarta Sans', -apple-system, sans-serif; }
 
+/* Supprime le délai de 300ms au tap + les clics fantômes sur mobile/trackpad.
+   C'est la cause principale du "je dois cliquer plusieurs fois". */
+button, a, select, [role="button"], input[type="submit"], label {
+  touch-action: manipulation;
+}
+/* Empêche le double-tap zoom d'avaler le premier clic */
+* { -webkit-tap-highlight-color: transparent; }
+
 input[type=number]::-webkit-outer-spin-button,
 input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 input[type=number] { -moz-appearance: textfield; }

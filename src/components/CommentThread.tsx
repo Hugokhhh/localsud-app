@@ -30,6 +30,7 @@ export function CommentThread({
   const [replyTo, setReplyTo] = useState<string | null>(null)
   const [replyContent, setReplyContent] = useState('')
   const [lightbox, setLightbox] = useState<string | null>(null)
+  const [statusLoading, setStatusLoading] = useState<string | null>(null)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -84,12 +85,19 @@ export function CommentThread({
   }
 
   async function changeStatus(commentId: string, status: string) {
-    await fetch(`/api/comments?id=${commentId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status }),
-    })
-    router.refresh()
+    // Anti double-clic : si une requête est déjà en cours pour ce commentaire, on ignore
+    if (statusLoading === commentId) return
+    setStatusLoading(commentId)
+    try {
+      await fetch(`/api/comments?id=${commentId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      })
+      router.refresh()
+    } finally {
+      setStatusLoading(null)
+    }
   }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -276,6 +284,7 @@ export function CommentThread({
                         <span style={{ fontSize: 11, color: 'var(--ink-mute)', fontWeight: 600, marginRight: 4 }}>Statut :</span>
                         {Object.entries(COMMENT_STATUS).map(([key, meta]) => (
                           <button key={key} onClick={() => changeStatus(c.id, key)}
+                            disabled={statusLoading === c.id}
                                   style={statusBtn(meta.color, c.status === key)}>
                             <i className={`fa-solid ${meta.icon}`}></i> {meta.label}
                           </button>
