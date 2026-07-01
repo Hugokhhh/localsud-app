@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { computeBilling, formatPrice, formatDate, PROJECT_STATUS, PROJECT_TYPE, timeAgo } from '@/lib/utils'
+import { computeBilling, formatPrice, formatDate, timeAgo, PROJECT_STATUS, PROJECT_TYPE } from '@/lib/utils'
 import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
@@ -18,7 +18,8 @@ export default async function EspaceAccueilPage() {
       projects: {
         include: {
           payments: { orderBy: { order: 'asc' } },
-          comments: { orderBy: { createdAt: 'desc' }, take: 5 },
+          steps: { orderBy: { order: 'asc' } },
+          comments: { orderBy: { createdAt: 'desc' }, take: 10 },
         },
         orderBy: { createdAt: 'desc' },
       },
@@ -26,307 +27,228 @@ export default async function EspaceAccueilPage() {
   })
 
   const projects = client?.projects || []
+
   if (projects.length === 0) {
     return (
       <div>
-        <h1 style={pageTitle}>Bonjour, <em>{client?.company || 'cher client'}</em></h1>
+        <h1 style={pageTitle}>Bonjour, <em style={{ color: 'var(--yellow-deep)', fontStyle: 'italic' }}>{client?.company || 'cher client'}</em></h1>
         <p style={pageSub}>Votre projet n'est pas encore configuré. Hugo vous contactera prochainement.</p>
       </div>
     )
   }
 
-  // Récupérer les auteurs des derniers commentaires (via authorMap)
-  const allCommentAuthorIds = [
-    ...new Set(projects.flatMap(p => p.comments.map(c => c.authorId))),
-  ]
+  // Prendre le projet principal (le plus récent actif)
+  const mainProject = projects[0]
+
+  // Récupérer les auteurs des commentaires
+  const authorIds = [...new Set(mainProject.comments.map(c => c.authorId))]
   const authors = await prisma.user.findMany({
-    where: { id: { in: allCommentAuthorIds } },
+    where: { id: { in: authorIds } },
     select: { id: true, name: true, role: true },
   })
   const authorMap = Object.fromEntries(authors.map(a => [a.id, a]))
 
-  const totalBilling = projects.reduce((acc, p) => {
-    const b = computeBilling(p.payments as any[])
-    return { total: acc.total + b.total, paid: acc.paid + b.paid, remaining: acc.remaining + b.remaining }
-  }, { total: 0, paid: 0, remaining: 0 })
+  const openCount = mainProject.comments.filter(c => c.status === 'OPEN' && !c.parentId).length
+  const resolvedCount = mainProject.comments.filter(c => c.status === 'RESOLVED' && !c.parentId).length
+  const totalComments = mainProject.comments.filter(c => !c.parentId).length
 
-  const totalOpenComments = projects.reduce(
-    (acc, p) => acc + p.comments.filter(c => c.status === 'OPEN' && !c.parentId).length,
-    0
-  )
+  const billing = computeBilling(mainProject.payments as any[])
+  const currentStepIdx = STATUS_ORDER.indexOf(mainProject.status as any)
+  const statusMeta = PROJECT_STATUS[mainProject.status as keyof typeof PROJECT_STATUS]
 
-  // Prochaine échéance à payer
-  const upcomingPayment = projects
-    .flatMap(p => p.payments.map(pay => ({ ...pay, projectName: p.name })))
-    .filter(p => p.status === 'PENDING' || p.status === 'OVERDUE')
-    .sort((a, b) => {
-      if (!a.dueDate) return 1
-      if (!b.dueDate) return -1
-      return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
-    })[0]
-
-  // Activité récente (4 derniers commentaires tous projets confondus)
-  const recentActivity = projects
-    .flatMap(p => p.comments.map(c => ({
-      ...c,
-      projectName: p.name,
-      projectId: p.id,
-      author: authorMap[c.authorId] || { name: 'Utilisateur', role: 'CLIENT' },
-    })))
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+  // Activité récente
+  const recentActivity = mainProject.comments
     .slice(0, 4)
+    .map(c => ({
+      ...c,
+      author: authorMap[c.authorId] || { name: 'Utilisateur', role: 'CLIENT' },
+    }))
 
   return (
     <div>
-      <h1 style={pageTitle}>Bonjour, <em>{client?.company}</em></h1>
-      <p style={pageSub}>
-        {projects.length === 1
-          ? <>Suivez l'avancement de votre projet <b>{projects[0].name}</b></>
-          : <>Vous avez <b>{projects.length} projets</b> en cours</>
-        }
-      </p>
+      <h1 style={pageTitle}>Bonjour, <em style={{ color: 'var(--yellow-deep)', fontStyle: 'italic' }}>{client?.company}</em></h1>
+      <p style={pageSub}>Suivez l'avancement de votre site web LocalSud</p>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14, marginBottom: 24 }}>
-        <StatCard label="Projets" value={String(projects.length)} icon="fa-folder-open" color="var(--ink)" />
-        <StatCard label="Retours ouverts" value={String(totalOpenComments)} icon="fa-comments" color="var(--red)" />
-        <StatCard label="Déjà payé" value={formatPrice(totalBilling.paid)} icon="fa-check" color="var(--green)" />
-        <StatCard label="Reste à régler" value={formatPrice(totalBilling.remaining)} icon="fa-hourglass" color="var(--yellow-deep)" />
+      {/* === VOS RESSOURCES (les 3 cards) === */}
+      <div style={{ marginBottom: 28 }}>
+        <div style={sectionLabel}>Vos ressources</div>
+        <div style={sectionTitleStyle}>Tout ce qu'il vous faut, au même endroit</div>
+        <p style={{ fontSize: 12, color: 'var(--ink-mute)', marginTop: 4, marginBottom: 16 }}>
+          Mis à jour par votre chef de projet · Hugo Chey
+        </p>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
+
+          {/* Card Maquette */}
+          <Link href={mainProject.mockupUrl ? mainProject.mockupUrl : `/espace/projets/${mainProject.id}`}
+            target={mainProject.mockupUrl ? '_blank' : undefined}
+            rel="noopener noreferrer"
+            style={resCardStyle}>
+            <div style={{ ...resStatusStyle, background: 'var(--yellow-soft)', color: 'var(--yellow-deep)' }}>
+              <i className="fa-solid fa-clock"></i>
+              {mainProject.status === 'MAQUETTE' || mainProject.status === 'RETOURS' ? ' Retours en cours' : ` Étape ${statusMeta?.label}`}
+            </div>
+            <div style={{ ...resIconStyle, background: 'var(--blue-soft)', color: 'var(--ink)' }}>
+              <i className="fa-solid fa-image"></i>
+            </div>
+            <div style={resSource}>{mainProject.mockupUrl ? 'Lien externe' : 'Non disponible'}</div>
+            <div style={resTitle}>Maquette</div>
+            <div style={resDesc}>La maquette interactive de votre site, ouverte aux commentaires.</div>
+            <div style={resCta}>
+              {mainProject.mockupUrl ? 'Ouvrir' : 'Bientôt disponible'}
+              {mainProject.mockupUrl && <i className="fa-solid fa-arrow-up-right-from-square" style={{ marginLeft: 6 }}></i>}
+            </div>
+          </Link>
+
+          {/* Card Commentaires & retours */}
+          <Link href={`/espace/projets/${mainProject.id}?tab=retours`} style={resCardStyle}>
+            <div style={{ ...resStatusStyle, background: openCount > 0 ? 'var(--yellow-soft)' : 'var(--green-soft)', color: openCount > 0 ? 'var(--yellow-deep)' : 'var(--green)' }}>
+              <i className={`fa-solid ${openCount > 0 ? 'fa-clock' : 'fa-check'}`}></i>
+              {openCount > 0 ? ` ${openCount} à traiter` : ' À jour'}
+            </div>
+            <div style={{ ...resIconStyle, background: 'var(--yellow-soft)', color: 'var(--ink)' }}>
+              <i className="fa-regular fa-comments"></i>
+            </div>
+            <div style={resSource}>Espace dédié</div>
+            <div style={resTitle}>Commentaires & retours</div>
+            <div style={resDesc}>Posez vos questions, demandez des modifications et signalez vos axes d'amélioration.</div>
+            <div style={resCta}>Ouvrir <i className="fa-solid fa-arrow-right" style={{ marginLeft: 6 }}></i></div>
+          </Link>
+
+          {/* Card Documents / Drive */}
+          <Link href={mainProject.documentsUrl ? mainProject.documentsUrl : `/espace/projets/${mainProject.id}`}
+            target={mainProject.documentsUrl ? '_blank' : undefined}
+            rel="noopener noreferrer"
+            style={resCardStyle}>
+            <div style={{ ...resStatusStyle, background: 'var(--bg)', color: 'var(--ink-soft)' }}>
+              <i className="fa-solid fa-folder"></i>
+              {mainProject.documentsUrl ? ' Drive partagé' : ' Non disponible'}
+            </div>
+            <div style={{ ...resIconStyle, background: 'var(--bg)', color: 'var(--ink)' }}>
+              <i className="fa-solid fa-folder-open"></i>
+            </div>
+            <div style={resSource}>Drive</div>
+            <div style={resTitle}>Vos documents</div>
+            <div style={resDesc}>Logo, photos et PDF liés à votre projet.</div>
+            <div style={resCta}>
+              {mainProject.documentsUrl ? 'Ouvrir' : 'Bientôt disponible'}
+              {mainProject.documentsUrl && <i className="fa-solid fa-arrow-up-right-from-square" style={{ marginLeft: 6 }}></i>}
+            </div>
+          </Link>
+
+        </div>
       </div>
 
-      {upcomingPayment && (
-        <div style={{
-          background: upcomingPayment.status === 'OVERDUE' ? '#FEE9E7' : '#FFF7D6',
-          border: `1px solid ${upcomingPayment.status === 'OVERDUE' ? 'var(--red)' : 'var(--yellow)'}`,
-          borderRadius: 14, padding: 18, marginBottom: 24,
-          display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap',
-        }}>
-          <div style={{
-            width: 44, height: 44, borderRadius: 12,
-            background: upcomingPayment.status === 'OVERDUE' ? 'var(--red)' : 'var(--yellow-deep)',
-            color: 'white', display: 'grid', placeItems: 'center', fontSize: 18,
-          }}>
-            <i className={`fa-solid ${upcomingPayment.status === 'OVERDUE' ? 'fa-circle-exclamation' : 'fa-hourglass-half'}`}></i>
+      {/* === STATS === */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 14, marginBottom: 28 }}>
+        <StatBox label="Projet en cours" value={PROJECT_TYPE[mainProject.type as keyof typeof PROJECT_TYPE] || 'Projet'} sub={`Démarré le ${formatDate(mainProject.createdAt)}`} />
+        <StatBox label="Avancement" value={`${billing.progress}%`} sub={`${formatPrice(billing.paid)} payé sur ${formatPrice(billing.total)}`} progress={billing.progress} />
+        <StatBox label="Livraison estimée" value={mainProject.estimatedDelivery ? formatDate(mainProject.estimatedDelivery) : 'À définir'} sub={statusMeta?.label || ''} />
+        <StatBox label="Retours à traiter" value={`${openCount} / ${totalComments}`} sub={`${resolvedCount} résolu${resolvedCount > 1 ? 's' : ''}`} />
+      </div>
+
+      {/* === ACTIVITÉ + ÉTAPES === */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
+
+        {/* Activité récente */}
+        <div style={cardStyle}>
+          <div style={cardHead}>
+            <div style={cardTitle}>Activité récente</div>
+            <Link href={`/espace/projets/${mainProject.id}?tab=retours`} style={{ fontSize: 12, color: 'var(--ink-mute)', textDecoration: 'none' }}>
+              Tout voir
+            </Link>
           </div>
-          <div style={{ flex: 1, minWidth: 200 }}>
-            <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 700, color: 'var(--ink-mute)', marginBottom: 2 }}>
-              {upcomingPayment.status === 'OVERDUE' ? 'Paiement en retard' : 'Prochaine échéance'}
-            </div>
-            <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--ink)' }}>
-              {upcomingPayment.label} · {upcomingPayment.projectName}
-            </div>
-            {upcomingPayment.dueDate && (
-              <div style={{ fontSize: 13, color: 'var(--ink-soft)', marginTop: 2 }}>
-                À régler avant le {formatDate(upcomingPayment.dueDate)}
+          {recentActivity.length === 0 ? (
+            <div style={{ fontSize: 13, color: 'var(--ink-mute)', padding: '8px 0' }}>Aucun échange pour le moment.</div>
+          ) : recentActivity.map((a, i) => (
+            <div key={a.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '10px 0', borderTop: i > 0 ? '1px solid var(--line-soft)' : 'none' }}>
+              <div style={{
+                width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+                background: a.author?.role === 'ADMIN' ? 'var(--ink)' : 'var(--yellow)',
+                color: a.author?.role === 'ADMIN' ? 'var(--yellow)' : 'var(--ink)',
+                display: 'grid', placeItems: 'center', fontWeight: 700, fontSize: 11,
+              }}>
+                {a.author?.name?.charAt(0)?.toUpperCase() || '?'}
               </div>
-            )}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink)', marginBottom: 2 }}>
+                  {a.author?.role === 'ADMIN' ? 'Hugo (LocalSud)' : a.author?.name}
+                  <span style={{ fontSize: 11, color: 'var(--ink-mute)', fontWeight: 400, marginLeft: 6 }}>· {timeAgo(a.createdAt)}</span>
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--ink-soft)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  📍 {a.section} · {a.content.slice(0, 60)}{a.content.length > 60 ? '…' : ''}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Étapes du projet */}
+        <div style={cardStyle}>
+          <div style={cardHead}>
+            <div style={cardTitle}>Étapes du projet</div>
+            <span style={{ fontSize: 12, color: 'var(--ink-mute)' }}>{STATUS_ORDER.length} étapes</span>
           </div>
-          <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--ink)' }}>
-            {formatPrice(Number(upcomingPayment.amount))}
-          </div>
-          <Link href="/espace/factures" style={{
-            padding: '10px 18px', background: 'var(--ink)', color: 'white',
-            borderRadius: 100, fontSize: 13, fontWeight: 700, textDecoration: 'none',
-            display: 'inline-flex', alignItems: 'center', gap: 8,
-          }}>
-            Voir les factures <i className="fa-solid fa-arrow-right"></i>
-          </Link>
+          {STATUS_ORDER.map((s, idx) => {
+            const isDone = idx < currentStepIdx
+            const isCurrent = idx === currentStepIdx
+            const meta = PROJECT_STATUS[s as keyof typeof PROJECT_STATUS]
+            return (
+              <div key={s} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '9px 0', borderTop: idx > 0 ? '1px solid var(--line-soft)' : 'none' }}>
+                <div style={{
+                  width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
+                  display: 'grid', placeItems: 'center', fontSize: 11, fontWeight: 700,
+                  background: isDone ? 'var(--green)' : isCurrent ? 'var(--yellow)' : 'var(--bg)',
+                  color: isDone ? 'white' : isCurrent ? 'var(--ink)' : 'var(--ink-mute)',
+                  border: isDone || isCurrent ? 'none' : '2px solid var(--line)',
+                }}>
+                  {isDone ? <i className="fa-solid fa-check" style={{ fontSize: 10 }}></i> : idx + 1}
+                </div>
+                <div style={{ flex: 1, fontSize: 13, fontWeight: isCurrent ? 700 : 500, color: isCurrent ? 'var(--ink)' : isDone ? 'var(--ink-soft)' : 'var(--ink-mute)' }}>
+                  {meta?.label}
+                </div>
+                {isDone && <span style={{ fontSize: 11, color: 'var(--green)', fontWeight: 700 }}>Validé</span>}
+                {isCurrent && <span style={{ fontSize: 11, color: 'var(--yellow-deep)', fontWeight: 700 }}>En cours</span>}
+              </div>
+            )
+          })}
+        </div>
+
+      </div>
+    </div>
+  )
+}
+
+function StatBox({ label, value, sub, progress }: { label: string; value: string; sub: string; progress?: number }) {
+  return (
+    <div style={{ background: 'var(--white)', border: '1px solid var(--line)', borderRadius: 14, padding: 18 }}>
+      <div style={{ fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ink-mute)', fontWeight: 700, marginBottom: 4 }}>{label}</div>
+      <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--ink)', lineHeight: 1.1, marginBottom: 4 }}>{value}</div>
+      {progress !== undefined && (
+        <div style={{ height: 4, background: 'var(--line)', borderRadius: 4, marginBottom: 6, overflow: 'hidden' }}>
+          <div style={{ width: `${progress}%`, height: '100%', background: 'var(--yellow)', borderRadius: 4 }} />
         </div>
       )}
-
-      <div style={{ marginBottom: 16 }}>
-        <div style={sectionKicker}>Mes projets</div>
-        <h2 style={sectionTitle}>{projects.length === 1 ? 'Votre projet' : 'Tous vos projets'}</h2>
-      </div>
-
-      <div style={{ display: 'grid', gap: 16, marginBottom: 32 }}>
-        {projects.map(project => {
-          const statusMeta = PROJECT_STATUS[project.status as keyof typeof PROJECT_STATUS]
-          const billing = computeBilling(project.payments as any[])
-          const openComments = project.comments.filter(c => c.status === 'OPEN' && !c.parentId).length
-          const currentStepIdx = STATUS_ORDER.indexOf(project.status as any)
-
-          return (
-            <Link key={project.id} href={`/espace/projets/${project.id}`} style={projectCardStyle}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 10, flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ink-mute)', fontWeight: 700 }}>
-                    {PROJECT_TYPE[project.type as keyof typeof PROJECT_TYPE]}
-                  </span>
-                  <span style={{
-                    fontSize: 11, padding: '3px 10px', borderRadius: 100,
-                    background: statusColor(statusMeta?.color, 'bg'),
-                    color: statusColor(statusMeta?.color, 'text'),
-                    fontWeight: 700,
-                  }}>
-                    {statusMeta?.label}
-                  </span>
-                </div>
-                {openComments > 0 && (
-                  <span style={{ background: 'var(--red)', color: 'white', fontSize: 10, padding: '3px 10px', borderRadius: 10, fontWeight: 700 }}>
-                    {openComments} retour{openComments > 1 ? 's' : ''} à traiter
-                  </span>
-                )}
-              </div>
-
-              <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--ink)', marginBottom: 14 }}>
-                {project.name}
-              </div>
-
-              <div style={{ display: 'flex', gap: 4, marginBottom: 16 }}>
-                {STATUS_ORDER.map((s, idx) => {
-                  const isDone = idx < currentStepIdx
-                  const isCurrent = idx === currentStepIdx
-                  return (
-                    <div key={s} style={{ flex: 1 }}>
-                      <div style={{
-                        height: 4, borderRadius: 4,
-                        background: isDone || isCurrent ? 'var(--yellow)' : 'var(--line)',
-                        marginBottom: 4,
-                      }} />
-                      <div style={{
-                        fontSize: 10, textAlign: 'center',
-                        color: isCurrent ? 'var(--ink)' : isDone ? 'var(--ink-soft)' : 'var(--ink-mute)',
-                        fontWeight: isCurrent ? 700 : 500,
-                      }}>
-                        {PROJECT_STATUS[s as keyof typeof PROJECT_STATUS]?.label}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', paddingTop: 14, borderTop: '1px solid var(--line)' }}>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  {project.mockupUrl && (
-                    <span style={quickBadge}>
-                      <i className="fa-solid fa-image" style={{ color: 'var(--yellow-deep)' }}></i> Maquette
-                    </span>
-                  )}
-                  {project.documentsUrl && (
-                    <span style={quickBadge}>
-                      <i className="fa-solid fa-folder-open" style={{ color: 'var(--ink)' }}></i> Drive
-                    </span>
-                  )}
-                  {project.estimatedDelivery && (
-                    <span style={quickBadge}>
-                      <i className="fa-solid fa-calendar" style={{ color: 'var(--ink-mute)' }}></i> Livraison {formatDate(project.estimatedDelivery)}
-                    </span>
-                  )}
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: 10, color: 'var(--ink-mute)', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700 }}>
-                      {billing.progress}% payé
-                    </div>
-                    <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--ink)' }}>
-                      {formatPrice(billing.total)}
-                    </div>
-                  </div>
-                  <i className="fa-solid fa-arrow-right" style={{ color: 'var(--ink-mute)' }}></i>
-                </div>
-              </div>
-            </Link>
-          )
-        })}
-      </div>
-
-      {recentActivity.length > 0 && (
-        <>
-          <div style={{ marginBottom: 16 }}>
-            <div style={sectionKicker}>Activité récente</div>
-            <h2 style={sectionTitle}>Derniers échanges</h2>
-          </div>
-
-          <div style={{ background: 'var(--white)', border: '1px solid var(--line)', borderRadius: 16, overflow: 'hidden' }}>
-            {recentActivity.map((activity, idx) => (
-              <Link
-                key={activity.id}
-                href={`/espace/projets/${activity.projectId}`}
-                style={{
-                  display: 'flex', gap: 14, padding: '14px 18px',
-                  borderTop: idx > 0 ? '1px solid var(--line-soft)' : 'none',
-                  textDecoration: 'none', color: 'inherit',
-                }}
-              >
-                <div style={{
-                  width: 36, height: 36, borderRadius: '50%',
-                  background: activity.author?.role === 'ADMIN' ? 'var(--ink)' : 'var(--yellow)',
-                  color: activity.author?.role === 'ADMIN' ? 'var(--yellow)' : 'var(--ink)',
-                  display: 'grid', placeItems: 'center', fontWeight: 700, fontSize: 13, flexShrink: 0,
-                }}>
-                  {activity.author?.name?.charAt(0)?.toUpperCase() || '?'}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)' }}>
-                      {activity.author?.role === 'ADMIN' ? 'Hugo (LocalSud)' : activity.author?.name}
-                    </span>
-                    <span style={{ fontSize: 11, color: 'var(--ink-mute)' }}>· {activity.projectName}</span>
-                    <span style={{ fontSize: 11, color: 'var(--ink-mute)' }}>· {timeAgo(activity.createdAt)}</span>
-                  </div>
-                  <div style={{ fontSize: 13, color: 'var(--ink-soft)', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                    {activity.content}
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </>
-      )}
+      <div style={{ fontSize: 11, color: 'var(--ink-mute)' }}>{sub}</div>
     </div>
   )
 }
 
-function StatCard({ label, value, icon, color }: { label: string; value: string; icon: string; color: string }) {
-  return (
-    <div style={{
-      background: 'var(--white)', border: '1px solid var(--line)',
-      borderRadius: 14, padding: 18,
-      display: 'flex', alignItems: 'center', gap: 14,
-    }}>
-      <div style={{
-        width: 42, height: 42, borderRadius: 10,
-        background: 'var(--bg)', color,
-        display: 'grid', placeItems: 'center', fontSize: 18,
-      }}>
-        <i className={`fa-solid ${icon}`}></i>
-      </div>
-      <div>
-        <div style={{ fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ink-mute)', fontWeight: 700 }}>{label}</div>
-        <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--ink)', lineHeight: 1.1 }}>{value}</div>
-      </div>
-    </div>
-  )
-}
-
-function statusColor(color: string | undefined, mode: 'bg' | 'text') {
-  const map: Record<string, { bg: string; text: string }> = {
-    gray:   { bg: '#EEF0F6', text: '#4A5680' },
-    yellow: { bg: '#FFF7D6', text: '#7A6300' },
-    red:    { bg: '#FEE9E7', text: '#B12A1A' },
-    blue:   { bg: '#E4EAFC', text: '#1E3A8A' },
-    green:  { bg: '#DDF4E4', text: '#136B36' },
-  }
-  return (map[color || 'gray'] || map.gray)[mode]
-}
-
-const pageTitle: React.CSSProperties = {
-  fontSize: 32, fontWeight: 800, letterSpacing: '-0.03em', marginBottom: 6, color: 'var(--ink)',
-}
+const pageTitle: React.CSSProperties = { fontSize: 30, fontWeight: 800, letterSpacing: '-0.03em', marginBottom: 6, color: 'var(--ink)' }
 const pageSub: React.CSSProperties = { color: 'var(--ink-mute)', fontSize: 14, marginBottom: 28 }
-const sectionKicker: React.CSSProperties = {
-  fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase',
-  color: 'var(--ink-mute)', fontWeight: 700, marginBottom: 4,
+const sectionLabel: React.CSSProperties = { fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'var(--ink-mute)', fontWeight: 700, marginBottom: 4 }
+const sectionTitleStyle: React.CSSProperties = { fontSize: 19, fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--ink)' }
+const resCardStyle: React.CSSProperties = {
+  background: 'var(--white)', border: '1px solid var(--line)', borderRadius: 14,
+  padding: 18, textDecoration: 'none', display: 'flex', flexDirection: 'column', gap: 6,
+  cursor: 'pointer', transition: 'border-color 0.15s',
 }
-const sectionTitle: React.CSSProperties = {
-  fontSize: 22, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--ink)',
-}
-const projectCardStyle: React.CSSProperties = {
-  background: 'var(--white)', border: '1px solid var(--line)',
-  borderRadius: 16, padding: 20, textDecoration: 'none', display: 'block',
-}
-const quickBadge: React.CSSProperties = {
-  display: 'inline-flex', alignItems: 'center', gap: 6,
-  padding: '5px 10px', background: 'var(--bg)', border: '1px solid var(--line)',
-  borderRadius: 100, fontSize: 11, fontWeight: 600, color: 'var(--ink-soft)',
-}
+const resStatusStyle: React.CSSProperties = { fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 100, display: 'inline-flex', alignItems: 'center', gap: 4, alignSelf: 'flex-start' }
+const resIconStyle: React.CSSProperties = { width: 48, height: 48, borderRadius: 14, display: 'grid', placeItems: 'center', fontSize: 22, marginTop: 4 }
+const resSource: React.CSSProperties = { fontSize: 11, color: 'var(--ink-mute)', fontWeight: 600, letterSpacing: '0.05em' }
+const resTitle: React.CSSProperties = { fontSize: 16, fontWeight: 800, color: 'var(--ink)' }
+const resDesc: React.CSSProperties = { fontSize: 12, color: 'var(--ink-soft)', lineHeight: 1.5, flex: 1 }
+const resCta: React.CSSProperties = { fontSize: 12, fontWeight: 700, color: 'var(--ink)', marginTop: 4, display: 'flex', alignItems: 'center' }
+const cardStyle: React.CSSProperties = { background: 'var(--white)', border: '1px solid var(--line)', borderRadius: 14, padding: 18 }
+const cardHead: React.CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }
+const cardTitle: React.CSSProperties = { fontSize: 14, fontWeight: 700, color: 'var(--ink)' }
