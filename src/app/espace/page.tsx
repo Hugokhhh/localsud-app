@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic'
 
 const STATUS_ORDER = ['BRIEF', 'MAQUETTE', 'RETOURS', 'INTEGRATION', 'ONLINE'] as const
 
-export default async function EspaceAccueilPage() {
+export default async function EspaceAccueilPage({ searchParams }: { searchParams: { projectId?: string } }) {
   const user = await getCurrentUser() as any
   if (!user) redirect('/connexion')
 
@@ -37,8 +37,10 @@ export default async function EspaceAccueilPage() {
     )
   }
 
-  // Prendre le projet principal (le plus récent actif)
-  const mainProject = projects[0]
+  // FIX audit #1 : gérer plusieurs projets. On affiche celui demandé dans l'URL
+  // (?projectId=) s'il est valide, sinon le plus récent. Un sélecteur permet de switcher.
+  const mainProject = (searchParams?.projectId && projects.find(p => p.id === searchParams.projectId))
+    || projects[0]
 
   // Récupérer les auteurs des commentaires
   const authorIds = [...new Set(mainProject.comments.map(c => c.authorId))]
@@ -68,6 +70,33 @@ export default async function EspaceAccueilPage() {
     <div>
       <h1 style={pageTitle}>Bonjour, <em style={{ color: 'var(--yellow-deep)', fontStyle: 'italic' }}>{client?.company}</em></h1>
       <p style={pageSub}>Suivez l'avancement de votre site web LocalSud</p>
+
+      {/* FIX audit #1 : sélecteur de projet si le client en a plusieurs */}
+      {projects.length > 1 && (
+        <div style={{
+          display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center',
+          marginBottom: 24, padding: '12px 16px',
+          background: 'var(--white)', border: '1px solid var(--line)', borderRadius: 12,
+        }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink-mute)', marginRight: 4 }}>
+            <i className="fa-solid fa-folder-open" style={{ marginRight: 6 }}></i>Projet affiché :
+          </span>
+          {projects.map(p => {
+            const active = p.id === mainProject.id
+            return (
+              <Link key={p.id} href={`/espace?projectId=${p.id}`} style={{
+                padding: '6px 14px', borderRadius: 100, fontSize: 12, fontWeight: 700,
+                textDecoration: 'none',
+                background: active ? 'var(--ink)' : 'var(--bg)',
+                color: active ? 'white' : 'var(--ink-soft)',
+                border: active ? 'none' : '1px solid var(--line)',
+              }}>
+                {p.name}
+              </Link>
+            )
+          })}
+        </div>
+      )}
 
       {/* === VOS RESSOURCES (les 3 cards) === */}
       <div style={{ marginBottom: 28 }}>

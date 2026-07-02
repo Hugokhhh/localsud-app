@@ -25,14 +25,15 @@ export function NewClientButton() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       setSuccess(true)
+      // FIX audit #5 : on NE réactive PAS le bouton ici. Il reste désactivé
+      // pendant l'animation de succès (1,8s) pour empêcher une double création.
       setTimeout(() => {
-        setOpen(false); setSuccess(false)
+        setOpen(false); setSuccess(false); setSubmitting(false)
         setForm({ company: '', email: '', trade: '', city: '', projectType: 'VITRINE', totalPrice: '' })
         router.refresh()
       }, 1800)
     } catch (e: any) {
       alert(e.message || 'Erreur')
-    } finally {
       setSubmitting(false)
     }
   }

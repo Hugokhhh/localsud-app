@@ -17,7 +17,7 @@ export function AssignCollab({
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
 
-  async function save(newId: string) {
+  async function save(newId: string, previousId: string) {
     setSaving(true); setMsg(null)
     try {
       const res = await fetch(`/api/admin/clients/${clientId}/assign`, {
@@ -25,12 +25,20 @@ export function AssignCollab({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ collaboratorId: newId || null }),
       })
+      if (res.status === 401) {
+        window.location.href = '/connexion'
+        return
+      }
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Erreur')
       setMsg('✓ Mis à jour')
       router.refresh()
       setTimeout(() => setMsg(null), 2000)
-    } catch (e: any) { setMsg(e.message) } finally { setSaving(false) }
+    } catch (e: any) {
+      // FIX audit #4 : l'assignation a échoué → on remet l'affichage sur l'ancienne valeur
+      setValue(previousId)
+      setMsg('Échec : ' + (e.message || 'réessayez'))
+    } finally { setSaving(false) }
   }
 
   return (
@@ -41,7 +49,7 @@ export function AssignCollab({
     }}>
       <i className="fa-solid fa-user-tie" style={{ color: 'var(--ink)', fontSize: 14 }}></i>
       <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>Collaborateur assigné :</span>
-      <select value={value} onChange={e => { setValue(e.target.value); save(e.target.value) }} disabled={saving} style={{
+      <select value={value} onChange={e => { const prev = value; setValue(e.target.value); save(e.target.value, prev) }} disabled={saving} style={{
         padding: '6px 10px', borderRadius: 8,
         border: '1px solid var(--line)', background: 'var(--white)',
         fontSize: 13, fontFamily: 'inherit', color: 'var(--ink)',

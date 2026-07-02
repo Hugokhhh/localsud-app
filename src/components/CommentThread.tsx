@@ -32,6 +32,22 @@ export function CommentThread({
   const [lightbox, setLightbox] = useState<string | null>(null)
   const [statusLoading, setStatusLoading] = useState<string | null>(null)
 
+  // FIX audit #3 : masquer l'identité des intervenants LocalSud côté client.
+  // Le client voit "LocalSud" pour l'admin ET les collaborateurs (sous-traitance invisible).
+  // Côté interne (isAdmin), on garde les vrais noms.
+  function displayName(author: { name: string; role: string }) {
+    if (!isAdmin && (author.role === 'ADMIN' || author.role === 'COLLABORATOR')) {
+      return 'LocalSud'
+    }
+    return author.name
+  }
+  function displayInitials(author: { name: string; role: string }) {
+    if (!isAdmin && (author.role === 'ADMIN' || author.role === 'COLLABORATOR')) {
+      return 'LS'
+    }
+    return initials(author.name)
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!section.trim() || !content.trim()) return
@@ -42,6 +58,11 @@ export function CommentThread({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ projectId, type, section: section.trim(), content: content.trim() }),
       })
+      if (res.status === 401) {
+        alert('Votre session a expiré. Vous allez être redirigé vers la page de connexion.')
+        window.location.href = '/connexion'
+        return
+      }
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
 
@@ -227,11 +248,11 @@ export function CommentThread({
                   color: c.author.role === 'ADMIN' ? 'var(--yellow)' : 'var(--ink)',
                   display: 'grid', placeItems: 'center', fontWeight: 700, fontSize: 13,
                   flexShrink: 0,
-                }}>{initials(c.author.name)}</div>
+                }}>{displayInitials(c.author)}</div>
 
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6, flexWrap: 'wrap' }}>
-                    <span style={{ fontWeight: 700, fontSize: 14 }}>{c.author.name}</span>
+                    <span style={{ fontWeight: 700, fontSize: 14 }}>{displayName(c.author)}</span>
                     <span style={{
                       padding: '3px 9px', borderRadius: 100, fontSize: 10, fontWeight: 700,
                       textTransform: 'uppercase', letterSpacing: '0.05em',
@@ -280,7 +301,7 @@ export function CommentThread({
                       borderRadius: 8,
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                        <span style={{ fontWeight: 700, fontSize: 13 }}>{r.author.name}</span>
+                        <span style={{ fontWeight: 700, fontSize: 13 }}>{displayName(r.author)}</span>
                         <span style={{ fontSize: 12, color: 'var(--ink-mute)' }}>{timeAgo(r.createdAt)}</span>
                       </div>
                       <div style={{ fontSize: 13, color: 'var(--ink-soft)', lineHeight: 1.5 }}>{r.content}</div>

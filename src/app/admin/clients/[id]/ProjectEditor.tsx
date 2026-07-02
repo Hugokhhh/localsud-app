@@ -62,7 +62,7 @@ export function ProjectEditor({
     setSaving(true)
     try {
       // 1. Sauver les infos projet
-      await fetch(`/api/projects?id=${project.id}`, {
+      const projRes = await fetch(`/api/projects?id=${project.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -75,6 +75,12 @@ export function ProjectEditor({
           estimatedDelivery: data.estimatedDelivery || null,
         }),
       })
+      // FIX audit #2 : session expirée → redirection connexion
+      if (projRes.status === 401) {
+        alert('Votre session a expiré. Vous allez être redirigé vers la page de connexion.')
+        window.location.href = '/connexion'
+        return
+      }
 
       // 2. Sauver chaque paiement modifié — chaque échec est isolé pour ne pas
       //    bloquer les autres et informer précisément l'admin.
@@ -173,6 +179,8 @@ export function ProjectEditor({
   const totalSum = payments.reduce((acc, p) => acc + Number(p.amount || 0), 0)
   const paidSum = payments.filter(p => p.status === 'PAID').reduce((acc, p) => acc + Number(p.amount || 0), 0)
   const due = Math.max(0, Number(data.totalPrice) - paidSum)
+  // FIX audit #6 : détecter une incohérence entre le montant total et la somme des échéances
+  const mismatch = payments.length > 0 && Math.abs(totalSum - Number(data.totalPrice)) > 0.01
 
   return (
     <div style={{ position: 'relative', paddingBottom: dirty ? 80 : 0 }}>
@@ -365,6 +373,21 @@ export function ProjectEditor({
           <Total label="Déjà encaissé" value={formatPrice(paidSum)} color="var(--green)" />
           <Total label="Reste à encaisser" value={formatPrice(due)} color="var(--yellow)" />
         </div>
+
+        {mismatch && (
+          <div style={{
+            marginTop: 12, padding: '12px 16px', borderRadius: 10,
+            background: '#FFF7D6', border: '1px solid var(--yellow)',
+            fontSize: 13, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 10,
+          }}>
+            <i className="fa-solid fa-triangle-exclamation" style={{ color: 'var(--yellow-deep)' }}></i>
+            <span>
+              Attention : la somme des échéances (<b>{formatPrice(totalSum)}</b>) ne correspond pas
+              au montant total contractualisé (<b>{formatPrice(Number(data.totalPrice))}</b>).
+              L'espace client se base sur les échéances.
+            </span>
+          </div>
+        )}
       </Section>
       </>)}
 
