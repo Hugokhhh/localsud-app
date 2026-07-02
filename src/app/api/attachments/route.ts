@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
 import { put, del } from '@vercel/blob'
+import { errorResponse } from '@/lib/utils'
 
 const MAX_SIZE = 10 * 1024 * 1024 // 10 Mo
 
@@ -20,6 +21,11 @@ export async function POST(req: NextRequest) {
     }
     if (file.size > MAX_SIZE) {
       return NextResponse.json({ error: 'Fichier > 10 Mo' }, { status: 400 })
+    }
+    // FIX audit #4 : n'accepter que les images et les PDF (bloque .html/.svg/.exe piégés)
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic', 'application/pdf']
+    if (!allowedTypes.includes(file.type)) {
+      return NextResponse.json({ error: 'Type de fichier non autorisé (images et PDF uniquement)' }, { status: 400 })
     }
 
     // Vérifier que le commentaire appartient au bon utilisateur (sauf admin)
@@ -48,7 +54,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ attachment })
   } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 })
+    const { safeMessage, status: errStatus } = errorResponse(e); return NextResponse.json({ error: safeMessage }, { status: errStatus })
   }
 }
 
@@ -76,6 +82,6 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 })
+    const { safeMessage, status: errStatus } = errorResponse(e); return NextResponse.json({ error: safeMessage }, { status: errStatus })
   }
 }

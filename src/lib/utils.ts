@@ -23,6 +23,7 @@ export function formatFileSize(bytes: number): string {
 /** Temps relatif court ("il y a 2h", "hier", "il y a 3j") */
 export function timeAgo(date: Date | string): string {
   const d = typeof date === 'string' ? new Date(date) : date
+  if (!d || isNaN(d.getTime())) return ''
   const seconds = Math.floor((Date.now() - d.getTime()) / 1000)
   if (seconds < 60) return 'à l\'instant'
   const minutes = Math.floor(seconds / 60)
@@ -104,4 +105,22 @@ export function externalUrl(url: string | null | undefined): string {
   if (/^https?:\/\//i.test(trimmed)) return trimmed
   if (trimmed.startsWith('/')) return trimmed  // lien interne
   return 'https://' + trimmed
+}
+
+
+/** Gère proprement les erreurs d'API : renvoie le bon code HTTP et masque
+ *  les détails techniques (fuite d'info) tout en les loggant côté serveur.
+ *  Usage dans un catch : return errorResponse(e) */
+export function errorResponse(e: any) {
+  // Import dynamique pour éviter une dépendance circulaire
+  const status = e?.status && typeof e.status === 'number' ? e.status : 500
+  // Si c'est une HttpError (401/403/400/404) → on peut montrer le message (il est safe)
+  // Sinon (500) → message générique, on ne fuite pas les détails techniques
+  const safeMessage = status < 500
+    ? (e?.message || 'Requête invalide')
+    : 'Une erreur est survenue. Réessayez dans un instant.'
+  if (status >= 500) {
+    console.error('[API error]', e?.message, e?.stack)
+  }
+  return { safeMessage, status }
 }

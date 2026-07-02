@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAdmin } from '@/lib/auth'
-import { generateToken } from '@/lib/utils'
+import { generateToken, errorResponse } from '@/lib/utils'
 import { sendCollaboratorInvitationEmail } from '@/lib/emails'
 
 export const dynamic = 'force-dynamic'
@@ -20,7 +20,7 @@ export async function GET() {
       createdAt: c.createdAt.toISOString(),
     })) })
   } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 })
+    const { safeMessage, status: errStatus } = errorResponse(e); return NextResponse.json({ error: safeMessage }, { status: errStatus })
   }
 }
 
@@ -55,6 +55,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, collaboratorId: user.id })
   } catch (e: any) {
     console.error('[POST /api/admin/collaborators]', e)
-    return NextResponse.json({ error: e.message }, { status: 500 })
+    const { safeMessage, status: errStatus } = errorResponse(e); return NextResponse.json({ error: safeMessage }, { status: errStatus })
   }
 }

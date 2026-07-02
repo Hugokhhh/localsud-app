@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAdmin } from '@/lib/auth'
 import { put, del } from '@vercel/blob'
+import { errorResponse } from '@/lib/utils'
 
 /** POST - Créer une échéance (admin) */
 export async function POST(req: NextRequest) {
@@ -29,7 +30,7 @@ export async function POST(req: NextRequest) {
     })
     return NextResponse.json({ payment })
   } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 })
+    const { safeMessage, status: errStatus } = errorResponse(e); return NextResponse.json({ error: safeMessage }, { status: errStatus })
   }
 }
 
@@ -62,7 +63,7 @@ export async function PATCH(req: NextRequest) {
     const payment = await prisma.payment.update({ where: { id }, data })
     return NextResponse.json({ payment })
   } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 })
+    const { safeMessage, status: errStatus } = errorResponse(e); return NextResponse.json({ error: safeMessage }, { status: errStatus })
   }
 }
 
@@ -82,7 +83,7 @@ export async function DELETE(req: NextRequest) {
     await prisma.payment.delete({ where: { id } })
     return NextResponse.json({ success: true })
   } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 })
+    const { safeMessage, status: errStatus } = errorResponse(e); return NextResponse.json({ error: safeMessage }, { status: errStatus })
   }
 }
 
@@ -128,6 +129,6 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ payment })
   } catch (e: any) {
     console.error('[PUT /api/payments]', e)
-    return NextResponse.json({ error: e.message }, { status: 500 })
+    const { safeMessage, status: errStatus } = errorResponse(e); return NextResponse.json({ error: safeMessage }, { status: errStatus })
   }
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAdmin } from '@/lib/auth'
+import { errorResponse } from '@/lib/utils'
 
 /** POST - Créer un nouveau projet pour un clientId */
 export async function POST(req: NextRequest) {
@@ -29,7 +30,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ project })
   } catch (e: any) {
     console.error('[POST /api/projects]', e)
-    return NextResponse.json({ error: e.message }, { status: 500 })
+    const { safeMessage, status: errStatus } = errorResponse(e); return NextResponse.json({ error: safeMessage }, { status: errStatus })
   }
 }
 
@@ -63,7 +64,7 @@ export async function PATCH(req: NextRequest) {
     const updated = await prisma.project.update({ where: { id: projectId }, data })
     return NextResponse.json({ project: updated })
   } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 })
+    const { safeMessage, status: errStatus } = errorResponse(e); return NextResponse.json({ error: safeMessage }, { status: errStatus })
   }
 }
 
@@ -90,6 +91,6 @@ export async function DELETE(req: NextRequest) {
     await prisma.project.delete({ where: { id: projectId } })
     return NextResponse.json({ ok: true })
   } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 })
+    const { safeMessage, status: errStatus } = errorResponse(e); return NextResponse.json({ error: safeMessage }, { status: errStatus })
   }
 }

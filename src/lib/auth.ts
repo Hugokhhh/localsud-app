@@ -3,6 +3,17 @@ import Credentials from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
 import { prisma } from './prisma'
 
+/** Erreur HTTP avec code de statut, pour distinguer 401/403 des vraies erreurs 500 */
+export class HttpError extends Error {
+  status: number
+  constructor(status: number, message: string) {
+    super(message)
+    this.status = status
+    this.name = 'HttpError'
+  }
+}
+
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
   session: { strategy: 'jwt' },
   pages: {
@@ -63,9 +74,8 @@ export async function getCurrentUser() {
 
 export async function requireAdmin() {
   const user = await getCurrentUser()
-  if (!user || (user as any).role !== 'ADMIN') {
-    throw new Error('Unauthorized')
-  }
+  if (!user) throw new HttpError(401, 'Non authentifié')
+  if ((user as any).role !== 'ADMIN') throw new HttpError(403, 'Accès réservé à l\'administrateur')
   return user
 }
 

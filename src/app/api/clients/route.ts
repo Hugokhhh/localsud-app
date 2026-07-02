@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAdmin } from '@/lib/auth'
-import { generateToken } from '@/lib/utils'
+import { generateToken, errorResponse } from '@/lib/utils'
 import { sendInvitationEmail } from '@/lib/emails'
 
 /** GET - Liste de tous les clients (admin) */
@@ -23,7 +23,7 @@ export async function GET() {
     })
     return NextResponse.json({ clients })
   } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 401 })
+    const { safeMessage, status: errStatus } = errorResponse(e); return NextResponse.json({ error: safeMessage }, { status: errStatus })
   }
 }
 
@@ -91,6 +91,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, clientId: user.client?.id })
   } catch (e: any) {
     console.error('[POST /api/clients]', e)
-    return NextResponse.json({ error: e.message }, { status: 500 })
+    const { safeMessage, status: errStatus } = errorResponse(e); return NextResponse.json({ error: safeMessage }, { status: errStatus })
   }
 }

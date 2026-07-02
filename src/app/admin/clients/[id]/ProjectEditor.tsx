@@ -76,36 +76,48 @@ export function ProjectEditor({
         }),
       })
 
-      // 2. Sauver chaque paiement modifié
+      // 2. Sauver chaque paiement modifié — chaque échec est isolé pour ne pas
+      //    bloquer les autres et informer précisément l'admin.
+      const failed: string[] = []
       for (const p of payments) {
-        const isNew = p.id.startsWith('new-')
-        if (isNew) {
-          await fetch('/api/payments', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              projectId: project.id,
-              label: p.label, amount: p.amount, status: p.status,
-              dueDate: p.dueDate, invoiceRef: p.invoiceRef,
-            }),
-          })
-        } else {
-          await fetch(`/api/payments?id=${p.id}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              label: p.label, amount: p.amount, status: p.status,
-              dueDate: p.dueDate, invoiceRef: p.invoiceRef,
-            }),
-          })
+        try {
+          const isNew = p.id.startsWith('new-')
+          const res = isNew
+            ? await fetch('/api/payments', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  projectId: project.id,
+                  label: p.label, amount: p.amount, status: p.status,
+                  dueDate: p.dueDate, invoiceRef: p.invoiceRef,
+                }),
+              })
+            : await fetch(`/api/payments?id=${p.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  label: p.label, amount: p.amount, status: p.status,
+                  dueDate: p.dueDate, invoiceRef: p.invoiceRef,
+                }),
+              })
+          if (!res.ok) failed.push(p.label || 'une échéance')
+        } catch {
+          failed.push(p.label || 'une échéance')
         }
       }
 
-      setSaved(true); setDirty(false)
+      setDirty(false)
+      // router.refresh() recharge l'état réel depuis la BDD : les échéances "new-"
+      // récupèrent leur vrai id, ce qui évite tout doublon au prochain enregistrement.
       router.refresh()
-      setTimeout(() => setSaved(false), 2000)
+      if (failed.length > 0) {
+        alert(`Certaines échéances n'ont pas pu être enregistrées : ${failed.join(', ')}. Réessayez.`)
+      } else {
+        setSaved(true)
+        setTimeout(() => setSaved(false), 2000)
+      }
     } catch (e: any) {
-      alert(e.message || 'Erreur de sauvegarde')
+      alert('La sauvegarde a échoué. Vérifiez votre connexion et réessayez.')
     } finally {
       setSaving(false)
     }
