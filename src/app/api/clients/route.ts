@@ -39,6 +39,10 @@ export async function POST(req: NextRequest) {
     }
 
     const emailNorm = String(email).toLowerCase().trim()
+    // FIX audit #11 : validation basique du format email
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNorm)) {
+      return NextResponse.json({ error: 'Adresse email invalide' }, { status: 400 })
+    }
     const existing = await prisma.user.findUnique({ where: { email: emailNorm } })
     if (existing) {
       return NextResponse.json({ error: 'Un compte avec cet email existe déjà' }, { status: 400 })

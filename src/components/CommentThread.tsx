@@ -45,18 +45,28 @@ export function CommentThread({
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
 
-      // Upload pièces jointes
+      // Upload pièces jointes — chaque échec est isolé pour ne pas
+      // faire croire que tout le retour a échoué (le commentaire est déjà créé).
+      let uploadFailed = false
       for (const file of pendingFiles) {
-        const fd = new FormData()
-        fd.append('file', file)
-        fd.append('commentId', data.comment.id)
-        await fetch('/api/attachments', { method: 'POST', body: fd })
+        try {
+          const fd = new FormData()
+          fd.append('file', file)
+          fd.append('commentId', data.comment.id)
+          const up = await fetch('/api/attachments', { method: 'POST', body: fd })
+          if (!up.ok) uploadFailed = true
+        } catch {
+          uploadFailed = true
+        }
       }
 
       setSection(''); setContent(''); setPendingFiles([]); setType('MODIFICATION')
       router.refresh()
+      if (uploadFailed) {
+        alert('Votre retour a bien été envoyé, mais une pièce jointe n\'a pas pu être ajoutée. Réessayez de la joindre.')
+      }
     } catch (err: any) {
-      alert(err.message || 'Erreur')
+      alert('Votre retour n\'a pas pu être envoyé. Vérifiez votre connexion et réessayez.')
     } finally {
       setSubmitting(false)
     }
@@ -79,6 +89,8 @@ export function CommentThread({
       })
       setReplyTo(null); setReplyContent('')
       router.refresh()
+    } catch {
+      alert('Connexion perdue. Vérifiez votre réseau et réessayez.')
     } finally {
       setSubmitting(false)
     }

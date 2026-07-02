@@ -69,6 +69,7 @@ export async function sendCollaboratorInvitationEmail(opts: { to: string; collab
     return
   }
   const setupUrl = `${APP_URL}/setup?token=${opts.setupToken}`
+  try {
   await resend.emails.send({
     from: FROM,
     to: opts.to,
@@ -90,4 +91,8 @@ export async function sendCollaboratorInvitationEmail(opts: { to: string; collab
       </div>
     `,
   })
+  } catch (e: any) {
+    // FIX audit #2 : ne pas faire crasher la création du collaborateur si l'email échoue
+    console.error('[Email] invitation collaborateur échouée:', e?.message)
+  }
 }

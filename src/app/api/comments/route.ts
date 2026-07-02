@@ -28,6 +28,17 @@ export async function POST(req: NextRequest) {
       if (!project) return NextResponse.json({ error: 'Projet non autorisé' }, { status: 403 })
     }
 
+    // FIX audit #6 : si c'est une réponse, le parent doit appartenir au même projet
+    if (parentId) {
+      const parent = await prisma.comment.findUnique({
+        where: { id: parentId },
+        select: { projectId: true },
+      })
+      if (!parent || parent.projectId !== projectId) {
+        return NextResponse.json({ error: 'Commentaire parent invalide' }, { status: 400 })
+      }
+    }
+
     const comment = await prisma.comment.create({
       data: {
         projectId,
@@ -71,6 +82,17 @@ export async function PATCH(req: NextRequest) {
     if (!['OPEN', 'IN_PROGRESS', 'RESOLVED'].includes(status)) {
       return NextResponse.json({ error: 'Statut invalide' }, { status: 400 })
     }
+
+    // FIX audit #1 : un collaborateur ne peut modifier QUE les retours
+    // des clients qui lui sont assignés.
+    const target = await prisma.comment.findUnique({
+      where: { id },
+      select: { projectId: true },
+    })
+    if (!target) return NextResponse.json({ error: 'Introuvable' }, { status: 404 })
+    const { canAccessProject } = await import('@/lib/auth')
+    const allowed = await canAccessProject(user.id, user.role, target.projectId)
+    if (!allowed) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const comment = await prisma.comment.update({
       where: { id },

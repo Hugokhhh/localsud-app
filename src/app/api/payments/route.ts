@@ -11,11 +11,16 @@ export async function POST(req: NextRequest) {
     if (!projectId || !label || amount === undefined) {
       return NextResponse.json({ error: 'Champs requis manquants' }, { status: 400 })
     }
+    // FIX audit #3 : refuser les montants négatifs
+    const amountNum = parseFloat(amount)
+    if (isNaN(amountNum) || amountNum < 0) {
+      return NextResponse.json({ error: 'Le montant doit être positif' }, { status: 400 })
+    }
     const payment = await prisma.payment.create({
       data: {
         projectId,
         label,
-        amount: parseFloat(amount),
+        amount: amountNum,
         status: status || 'PENDING',
         dueDate: dueDate ? new Date(dueDate) : null,
         invoiceRef: invoiceRef || null,
@@ -38,7 +43,13 @@ export async function PATCH(req: NextRequest) {
     const body = await req.json()
     const data: any = {}
     if (body.label !== undefined) data.label = body.label
-    if (body.amount !== undefined) data.amount = parseFloat(body.amount)
+    if (body.amount !== undefined) {
+      const a = parseFloat(body.amount)
+      if (isNaN(a) || a < 0) {
+        return NextResponse.json({ error: 'Le montant doit être positif' }, { status: 400 })
+      }
+      data.amount = a
+    }
     if (body.status !== undefined) {
       data.status = body.status
       // Auto-set paidAt si on passe en PAID

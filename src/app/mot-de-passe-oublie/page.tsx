@@ -12,13 +12,20 @@ export default function ForgotPasswordPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
-    await fetch('/api/auth/reset-password', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
-    })
-    setLoading(false)
-    setSent(true)
+    try {
+      await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+      })
+      setSent(true)
+    } catch {
+      // Même en cas d'erreur réseau, on affiche le message de confirmation
+      // (on ne révèle jamais si l'email existe — cohérent avec la sécurité).
+      setSent(true)
+    } finally {
+      setLoading(false)
+    }
   }
 
   if (sent) {
