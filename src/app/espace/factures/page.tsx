@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { computeBilling, formatPrice, formatDate, formatFileSize, TVA_MENTION } from '@/lib/utils'
+import { computeBilling, formatPrice, formatDate, formatFileSize, TVA_MENTION, externalUrl } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
 
@@ -154,7 +154,7 @@ export default async function FacturesClientPage() {
                       {p.status === 'PAID' ? '+ ' : ''}{formatPrice(Number(p.amount))}
                     </div>
                     {p.pdfUrl && (
-                      <a href={p.pdfUrl} target="_blank" rel="noopener noreferrer" download style={{
+                      <a href={externalUrl(p.pdfUrl)} target="_blank" rel="noopener noreferrer" download style={{
                         padding: '8px 12px', background: 'var(--bg)', color: 'var(--ink)',
                         borderRadius: 10, fontSize: 12, fontWeight: 700,
                         display: 'inline-flex', alignItems: 'center', gap: 6,

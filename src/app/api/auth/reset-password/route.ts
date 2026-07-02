@@ -3,9 +3,18 @@ import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 import { generateToken } from '@/lib/utils'
 import { sendResetPasswordEmail } from '@/lib/emails'
+import { rateLimit, getClientIp } from '@/lib/rate-limit'
 
 /** POST - Demander un reset (envoyer email) */
 export async function POST(req: NextRequest) {
+  // FIX audit #1 : anti-spam — max 3 demandes de reset par IP / 15 min
+  const ip = getClientIp(req)
+  if (!rateLimit(`reset:${ip}`, 3, 15 * 60 * 1000)) {
+    return NextResponse.json(
+      { error: 'Trop de demandes. Réessayez dans quelques minutes.' },
+      { status: 429 }
+    )
+  }
   const { email } = await req.json()
   if (!email) return NextResponse.json({ error: 'Email requis' }, { status: 400 })
 

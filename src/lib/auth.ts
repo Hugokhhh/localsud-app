@@ -2,6 +2,7 @@ import NextAuth from 'next-auth'
 import Credentials from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
 import { prisma } from './prisma'
+import { rateLimit } from './rate-limit'
 
 /** Erreur HTTP avec code de statut, pour distinguer 401/403 des vraies erreurs 500 */
 export class HttpError extends Error {
@@ -30,8 +31,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null
 
+        const emailKey = String(credentials.email).toLowerCase().trim()
+        // FIX audit #1 : anti brute-force — max 10 tentatives par email / 15 min
+        if (!rateLimit(`login:${emailKey}`, 10, 15 * 60 * 1000)) {
+          throw new Error('Trop de tentatives. Réessayez dans quelques minutes.')
+        }
+
         const user = await prisma.user.findUnique({
-          where: { email: String(credentials.email).toLowerCase().trim() },
+          where: { email: emailKey },
         })
 
         if (!user || !user.passwordHash) return null

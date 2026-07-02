@@ -36,7 +36,9 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const blob = await put(`pieces-jointes/${commentId}/${file.name}`, file, {
+    // FIX audit #3 : assainir le nom de fichier (évite caractères exotiques / traversal)
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 100) || 'fichier'
+    const blob = await put(`pieces-jointes/${commentId}/${safeName}`, file, {
       access: 'public',
       addRandomSuffix: true,
     })

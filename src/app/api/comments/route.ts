@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
 import { errorResponse } from '@/lib/utils'
+import { rateLimit, getClientIp } from '@/lib/rate-limit'
 
 /** POST - Créer un commentaire (client OU admin selon authorId) */
 export async function POST(req: NextRequest) {
@@ -9,10 +10,26 @@ export async function POST(req: NextRequest) {
     const user = await getCurrentUser() as any
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+    // FIX audit #1 : anti-spam — max 20 commentaires par IP / minute
+    const ip = getClientIp(req)
+    if (!rateLimit(`comment:${ip}`, 20, 60 * 1000)) {
+      return NextResponse.json(
+        { error: 'Trop de messages envoyés. Patientez un instant.' },
+        { status: 429 }
+      )
+    }
+
     const { projectId, type, section, content, parentId } = await req.json()
 
     if (!projectId || !content || !section) {
       return NextResponse.json({ error: 'Page et message requis' }, { status: 400 })
+    }
+    // FIX audit #4 : limites de longueur pour protéger la BDD
+    if (String(content).length > 5000) {
+      return NextResponse.json({ error: 'Message trop long (5000 caractères max)' }, { status: 400 })
+    }
+    if (String(section).length > 200) {
+      return NextResponse.json({ error: 'Nom de page trop long' }, { status: 400 })
     }
 
     // Vérifier que le client ne peut commenter QUE ses propres projets
